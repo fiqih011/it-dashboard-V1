@@ -1,120 +1,234 @@
-// app/table/transactions/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import DataTable from "@/components/table/DataTable";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
-type OpexTrx = {
-  id: string;
+import DataTable, { Column } from "@/components/table/DataTable";
+import TableScrollX from "@/components/table/TableScrollX";
+import FilterPanel from "@/components/filter/FilterPanel";
+import LoadingState from "@/components/ui/LoadingState";
+import ErrorState from "@/components/ui/ErrorState";
+import EmptyState from "@/components/ui/EmptyState";
+import Button from "@/components/ui/Button";
+
+type TabType = "OPEX" | "CAPEX";
+
+type TransactionRow = {
+  id: string; // UUID (TIDAK DITAMPILKAN)
   budgetPlanDisplayId: string;
-  coa: string;
-  category: string;
-  component: string;
-  vendor: string;
-  requester: string;
-  description: string;
-  qty: number;
-  amount: string;
-  status: string;
-  createdAt: string;
+
+  vendor?: string;
+  requester?: string;
+
+  prNumber?: string;
+  poType?: string;
+  poNumber?: string;
+  documentGr?: string;
+
+  description?: string;
+
+  qty?: number;
+  amount?: string;
+
+  submissionDate?: string;
+  approvedDate?: string;
+  deliveryDate?: string;
+
+  oc?: string;
+  ccLob?: string;
+  coa?: string;
+
+  status?: string;
+  notes?: string;
 };
 
-type CapexTrx = {
-  id: string;
-  budgetPlanDisplayId: string;
-  itemCode: string;
-  itemDescription: string;
-  vendor: string;
-  requester: string;
-  description: string;
-  assetNumber: string;
-  qty: number;
-  amount: string;
-  status: string;
-  createdAt: string;
-};
+export default function TransactionTablePage() {
+  const router = useRouter();
 
-export default function TransactionsPage() {
-  const [tab, setTab] = useState<"OPEX" | "CAPEX">("OPEX");
-  const [loading, setLoading] = useState(false);
-  const [opex, setOpex] = useState<OpexTrx[]>([]);
-  const [capex, setCapex] = useState<CapexTrx[]>([]);
+  const [tab, setTab] = useState<TabType>("OPEX");
+  const [rows, setRows] = useState<TransactionRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  // 🔹 PAGINATION STATE
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const total = rows.length;
+
+  const paginatedRows = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return rows.slice(start, end);
+  }, [rows, page, pageSize]);
+
+  const startEntry = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endEntry = Math.min(page * pageSize, total);
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(false);
+
+    try {
+      const endpoint =
+        tab === "OPEX"
+          ? "/api/transaction/opex"
+          : "/api/transaction/capex";
+
+      const res = await fetch(endpoint);
+      if (!res.ok) throw new Error("Fetch failed");
+
+      const json = await res.json();
+      setRows(Array.isArray(json.data) ? json.data : []);
+      setPage(1); // reset page saat tab / fetch
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        if (tab === "OPEX") {
-          const res = await fetch("/api/transaction/opex");
-          const json = await res.json();
-          setOpex(json.data ?? []);
-        } else {
-          const res = await fetch("/api/transaction/capex");
-          const json = await res.json();
-          setCapex(json.data ?? []);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    fetchData();
   }, [tab]);
 
-  const opexCols = [
-    { header: "Budget ID", accessor: (r: OpexTrx) => r.budgetPlanDisplayId },
-    { header: "COA", accessor: (r: OpexTrx) => r.coa },
-    { header: "Category", accessor: (r: OpexTrx) => r.category },
-    { header: "Component", accessor: (r: OpexTrx) => r.component },
-    { header: "Vendor", accessor: (r: OpexTrx) => r.vendor },
-    { header: "Requester", accessor: (r: OpexTrx) => r.requester },
-    { header: "Desc", accessor: (r: OpexTrx) => r.description },
-    { header: "Qty", accessor: (r: OpexTrx) => r.qty },
-    { header: "Amount", accessor: (r: OpexTrx) => r.amount },
-    { header: "Status", accessor: (r: OpexTrx) => r.status },
-  ];
-
-  const capexCols = [
-    { header: "Budget ID", accessor: (r: CapexTrx) => r.budgetPlanDisplayId },
-    { header: "Item Code", accessor: (r: CapexTrx) => r.itemCode },
-    { header: "Item Desc", accessor: (r: CapexTrx) => r.itemDescription },
-    { header: "Vendor", accessor: (r: CapexTrx) => r.vendor },
-    { header: "Requester", accessor: (r: CapexTrx) => r.requester },
-    { header: "Desc", accessor: (r: CapexTrx) => r.description },
-    { header: "Asset No", accessor: (r: CapexTrx) => r.assetNumber },
-    { header: "Qty", accessor: (r: CapexTrx) => r.qty },
-    { header: "Amount", accessor: (r: CapexTrx) => r.amount },
-    { header: "Status", accessor: (r: CapexTrx) => r.status },
+  const columns: Column<TransactionRow>[] = [
+    { header: "Budget Plan ID", accessor: "budgetPlanDisplayId" },
+    { header: "Vendor", accessor: "vendor" },
+    { header: "Requester", accessor: "requester" },
+    { header: "PR Number", accessor: "prNumber" },
+    { header: "PO Type", accessor: "poType" },
+    { header: "PO Number", accessor: "poNumber" },
+    { header: "Document GR", accessor: "documentGr" },
+    { header: "Description", accessor: "description" },
+    { header: "QTY", accessor: "qty" },
+    { header: "Amount", accessor: "amount" },
+    { header: "Submission Date", accessor: "submissionDate" },
+    { header: "Approved Date", accessor: "approvedDate" },
+    { header: "Delivery Date", accessor: "deliveryDate" },
+    { header: "O/C", accessor: "oc" },
+    { header: "CC / LOB", accessor: "ccLob" },
+    { header: "COA", accessor: "coa" },
+    { header: "Status", accessor: "status" },
+    { header: "Notes", accessor: "notes" },
+    {
+      header: "Action",
+      accessor: (row) => (
+        <Button
+          variant="secondary"
+          onClick={() =>
+            router.push(
+              `/input/transaction/${tab.toLowerCase()}/${row.id}`
+            )
+          }
+        >
+          Edit
+        </Button>
+      ),
+    },
   ];
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="space-y-4">
       <h1 className="text-xl font-bold">Tabel Transaksi</h1>
 
-      <div className="flex gap-2">
-        <button
+      {/* TAB SWITCH */}
+      <div className="flex gap-2 border-b pb-2">
+        <Button
+          variant={tab === "OPEX" ? "primary" : "secondary"}
           onClick={() => setTab("OPEX")}
-          className={`px-4 py-2 rounded ${
-            tab === "OPEX" ? "bg-blue-600 text-white" : "bg-gray-200"
-          }`}
         >
           OPEX
-        </button>
-        <button
+        </Button>
+        <Button
+          variant={tab === "CAPEX" ? "primary" : "secondary"}
           onClick={() => setTab("CAPEX")}
-          className={`px-4 py-2 rounded ${
-            tab === "CAPEX" ? "bg-blue-600 text-white" : "bg-gray-200"
-          }`}
         >
           CAPEX
-        </button>
+        </Button>
       </div>
 
-      {loading ? (
-        <div className="text-sm text-gray-600">Loading...</div>
-      ) : tab === "OPEX" ? (
-        <DataTable columns={opexCols} data={opex} />
-      ) : (
-        <DataTable columns={capexCols} data={capex} />
+      <FilterPanel
+        fields={[
+          {
+            key: "year",
+            label: "Tahun",
+            type: "select",
+            options: [{ label: "All", value: "" }],
+          },
+          {
+            key: "vendor",
+            label: "Vendor",
+            placeholder: "Vendor",
+          },
+          {
+            key: "status",
+            label: "Status",
+            placeholder: "Status",
+          },
+        ]}
+        onSearch={fetchData}
+        onReset={fetchData}
+      />
+
+      {loading && <LoadingState />}
+      {error && <ErrorState onRetry={fetchData} />}
+      {!loading && !error && rows.length === 0 && <EmptyState />}
+
+      {!loading && !error && rows.length > 0 && (
+        <>
+          <TableScrollX minWidth={1800}>
+            <DataTable columns={columns} data={paginatedRows} />
+          </TableScrollX>
+
+          {/* 🔹 PAGINATION FOOTER */}
+          <div className="flex items-center justify-between text-sm">
+            <div>
+              Showing {startEntry}-{endEntry} of {total} entries
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                disabled={page === 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Prev
+              </Button>
+
+              <span>
+                {page} / {Math.max(1, Math.ceil(total / pageSize))}
+              </span>
+
+              <Button
+                variant="secondary"
+                disabled={page >= Math.ceil(total / pageSize)}
+                onClick={() =>
+                  setPage((p) =>
+                    Math.min(Math.ceil(total / pageSize), p + 1)
+                  )
+                }
+              >
+                Next
+              </Button>
+
+              <select
+                className="border rounded px-2 py-1"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+              >
+                {[10, 25, 50].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

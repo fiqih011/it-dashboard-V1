@@ -1,143 +1,225 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
 import Tabs from "@/components/table/Tabs";
-import FilterPanel, { FilterState } from "@/components/table/FilterPanel";
+import DataTable from "@/components/table/DataTable";
 import PaginationBar from "@/components/table/PaginationBar";
 import ActionCell from "@/components/table/ActionCell";
-import BudgetPlanEditModal from "@/components/forms/BudgetPlanEditModal";
 
-type Row = {
-  id: string;
+import BudgetPlanFilter, {
+  BudgetPlanFilterValue,
+} from "@/components/filter/BudgetPlanFilter";
+
+import EditBudgetPlanModal from "@/components/modal/EditBudgetPlanModal";
+import BudgetPlanDetailModal from "@/components/modal/BudgetPlanDetailModal";
+
+import LoadingState from "@/components/ui/LoadingState";
+import ErrorState from "@/components/ui/ErrorState";
+import EmptyState from "@/components/ui/EmptyState";
+
+type BudgetPlanType = "OPEX" | "CAPEX";
+
+/**
+ * 🔒 UI Row (hasil mapping API → UI)
+ */
+type BudgetPlanRow = {
   displayId: string;
-  coa?: string;
-  category?: string;
-  component?: string;
-  itemCode?: string;
-  itemDescription?: string;
-  itemRemark?: string;
-  budgetPlanAmount: number;
+  coaOrItem: string;
+  componentOrDescription: string;
+  budgetPlan: string;
+  budgetRealisasi: string;
+  budgetRemaining: string;
 };
 
-export default function TableBudgetPlanPage() {
-  const [tab, setTab] = useState<"OPEX" | "CAPEX">("OPEX");
-  const [filter, setFilter] = useState<FilterState>({
-    year: "",
-    id: "",
-    coa: "",
-    component: "",
-  });
+export default function BudgetPlanTablePage() {
+  const router = useRouter();
+
+  // tab
+  const [type, setType] = useState<BudgetPlanType>("OPEX");
+
+  // filter
+  const [filters, setFilters] = useState<BudgetPlanFilterValue>({});
+
+  // pagination
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [rows, setRows] = useState<Row[]>([]);
+
+  // data
+  const [rows, setRows] = useState<BudgetPlanRow[]>([]);
   const [total, setTotal] = useState(0);
+
+  // ui state
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [editRow, setEditRow] = useState<Row | null>(null);
-
-  const fetchData = async () => {
-    setLoading(true);
-    const params = new URLSearchParams({
-      ...filter,
-      page: String(page),
-      pageSize: String(pageSize),
-    });
-
-    const res = await fetch(`/api/budget/${tab.toLowerCase()}?${params}`);
-    const json = await res.json();
-
-    setRows(json.data ?? []);
-    setTotal(json.total ?? 0);
-    setLoading(false);
-  };
+  // modal state
+  const [editOpen, setEditOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<BudgetPlanRow | null>(null);
 
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, page, pageSize]);
+  }, [type, page, pageSize]);
+
+  async function fetchData() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(pageSize),
+        ...(filters.year && { year: filters.year }),
+        ...(filters.id && { id: filters.id }),
+        ...(filters.coaOrItem && { coa: filters.coaOrItem }),
+        ...(filters.component && { component: filters.component }),
+      });
+
+      // 🔒 SESUAI API PHASE 1 (FREEZE)
+      const endpoint =
+        type === "OPEX" ? "/api/budget/opex" : "/api/budget/capex";
+
+      const res = await fetch(`${endpoint}?${params.toString()}`);
+      if (!res.ok) {
+        throw new Error("Gagal memuat data Budget Plan");
+      }
+
+      const json = await res.json();
+
+      // 🔥 MAPPING FINAL (DIKUNCI)
+      const mappedRows: BudgetPlanRow[] = (json.data ?? []).map(
+        (item: any) => ({
+          displayId: item.displayId,
+          coaOrItem: type === "OPEX" ? item.coa : item.itemCode,
+          componentOrDescription:
+            type === "OPEX"
+              ? item.component
+              : item.itemDescription,
+          budgetPlan: item.budgetPlanAmount,
+          budgetRealisasi: item.budgetRealisasiAmount,
+          budgetRemaining: item.budgetRemainingAmount,
+        })
+      );
+
+      setRows(mappedRows);
+      setTotal(json.total ?? 0);
+    } catch (err: any) {
+      setError(err.message ?? "Terjadi kesalahan");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading && rows.length === 0) return <LoadingState />;
+  if (error) return <ErrorState message={error} onRetry={fetchData} />;
 
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-bold mb-4">Tabel Budget Plan</h1>
+    <div className="space-y-4">
+      <h1 className="text-xl font-semibold">Tabel Budget Plan</h1>
 
-      <FilterPanel
-        value={filter}
-        onChange={setFilter}
-        onSearch={() => {
+      {/* TAB OPEX / CAPEX */}
+      <Tabs
+        value={type}
+        onChange={(v: BudgetPlanType) => {
+          setType(v);
+          setPage(1);
+        }}
+      />
+
+      {/* FILTER */}
+      <BudgetPlanFilter
+        value={filters}
+        onSearch={(v) => {
+          setFilters(v);
           setPage(1);
           fetchData();
         }}
         onReset={() => {
-          setFilter({ year: "", id: "", coa: "", component: "" });
+          setFilters({});
           setPage(1);
           fetchData();
         }}
       />
 
-      <Tabs value={tab} onChange={(v) => { setTab(v); setPage(1); }} />
-
-      <div className="border rounded mt-2">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-2 text-left">ID</th>
-              <th className="p-2 text-left">{tab === "OPEX" ? "COA" : "Item Code"}</th>
-              <th className="p-2 text-left">{tab === "OPEX" ? "Component" : "Description"}</th>
-              <th className="p-2 text-right">Plan</th>
-              <th className="p-2 text-left">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr><td colSpan={5} className="p-4">Loading…</td></tr>
-            )}
-            {!loading && rows.length === 0 && (
-              <tr><td colSpan={5} className="p-4">No data</td></tr>
-            )}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-t">
-                <td className="p-2">{r.displayId}</td>
-                <td className="p-2">{tab === "OPEX" ? r.coa : r.itemCode}</td>
-                <td className="p-2">
-                  {tab === "OPEX" ? r.component : r.itemDescription}
-                </td>
-                <td className="p-2 text-right">{r.budgetPlanAmount}</td>
-                <td className="p-2">
+      {/* TABLE */}
+      {rows.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <>
+          <DataTable
+            data={rows}
+            columns={[
+              { accessor: "displayId", header: "ID" },
+              { accessor: "coaOrItem", header: "COA / Item" },
+              {
+                accessor: "componentOrDescription",
+                header: "Component / Description",
+              },
+              { accessor: "budgetPlan", header: "Budget Plan" },
+              {
+                accessor: "budgetRealisasi",
+                header: "Budget Realisasi",
+              },
+              {
+                accessor: "budgetRemaining",
+                header: "Budget Remaining",
+              },
+              {
+                header: "Action",
+                accessor: (row) => (
                   <ActionCell
-                    displayId={r.displayId}
-                    type={tab.toLowerCase() as "opex" | "capex"}
-                    budgetPlanId={r.id}
-                    onEdit={() => setEditRow(r)}
-                    onInput={() =>
-                      window.location.href = `/input/transaction?type=${tab.toLowerCase()}&id=${r.id}&displayId=${r.displayId}`
-                    }
+                    onEdit={() => {
+                      setSelectedRow(row);
+                      setEditOpen(true);
+                    }}
+                    onInput={() => {
+                      router.push(
+                        `/input/transaction?type=${type}&id=${row.displayId}`
+                      );
+                    }}
+                    onDetail={() => {
+                      setSelectedRow(row);
+                      setDetailOpen(true);
+                    }}
                   />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                ),
+              },
+            ]}
+          />
 
-      <PaginationBar
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        onPageSizeChange={(n) => {
-          setPageSize(n);
-          setPage(1);
-        }}
-      />
+          <PaginationBar
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => {
+              setPageSize(s);
+              setPage(1);
+            }}
+          />
+        </>
+      )}
 
-      {editRow && (
-        <BudgetPlanEditModal
-          open={true}
-          onClose={() => setEditRow(null)}
-          type={tab.toLowerCase() as "opex" | "capex"}
-          id={editRow.id}
-          initialData={editRow}
-          onSaved={fetchData}
-        />
+      {/* MODALS */}
+      {selectedRow && (
+        <>
+          <EditBudgetPlanModal
+            open={editOpen}
+            data={selectedRow}
+            onClose={() => setEditOpen(false)}
+            onSuccess={fetchData}
+          />
+
+          <BudgetPlanDetailModal
+            open={detailOpen}
+            data={selectedRow}
+            transactions={[]}
+            onClose={() => setDetailOpen(false)}
+          />
+        </>
       )}
     </div>
   );

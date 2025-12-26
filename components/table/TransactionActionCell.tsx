@@ -4,21 +4,16 @@ import Button from "@/components/ui/Button";
 
 type Props = {
   onEdit: () => void;
-  onInput: () => void;
   onDetail: () => void;
 };
 
-export default function ActionCell({
+export default function TransactionActionCell({
   onEdit,
-  onInput,
   onDetail,
 }: Props) {
   return (
     <div className="flex gap-2">
       <Button onClick={onEdit}>Edit</Button>
-      <Button variant="secondary" onClick={onInput}>
-        Input
-      </Button>
       <Button variant="secondary" onClick={onDetail}>
         Detail
       </Button>
