@@ -1,0 +1,134 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//
+// ==========================
+// BUDGET PLAN — OPEX
+// ==========================
+model BudgetPlanOpex {
+  id                      String   @id @default(uuid())
+  displayId               String   @unique @map("display_id")
+  year                    Int
+  coa                     String
+  category                String
+  component               String
+
+  budgetPlanAmount        BigInt   @map("budget_plan_amount")
+  budgetRealisasiAmount   BigInt   @map("budget_realisasi_amount")
+  budgetRemainingAmount   BigInt   @map("budget_remaining_amount")
+
+  transactions            TransactionOpex[]
+
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  @@map("budget_plan_opex")
+}
+
+//
+// ==========================
+// TRANSACTION — OPEX
+// ==========================
+model TransactionOpex {
+  id                String   @id @default(uuid())
+  budgetPlanOpexId  String   @map("budget_plan_opex_id")
+
+  vendor            String
+  requester         String
+  prNumber          String?  @map("pr_number")
+  poType            String?  @map("po_type")
+  poNumber          String?  @map("po_number")
+  documentGr        String?  @map("document_gr")
+  description       String
+  qty               Int
+  amount            BigInt
+
+  submissionDate    DateTime? @map("submission_date")
+  approvedDate      DateTime? @map("approved_date")
+  deliveryDate      DateTime? @map("delivery_date")
+
+  oc                String?  @map("o_c")
+  ccLob             String?  @map("cc_lob")
+  coa               String
+  status            String
+  notes             String?
+
+  budgetPlan        BudgetPlanOpex @relation(fields: [budgetPlanOpexId], references: [id])
+
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("transaction_opex")
+}
+
+//
+// ==========================
+// BUDGET PLAN — CAPEX
+// ==========================
+model BudgetPlanCapex {
+  id                      String   @id @default(uuid())
+  displayId               String   @unique @map("display_id")
+  year                    Int
+
+  itemCode                String   @map("item_code")
+  itemDescription         String   @map("item_description")
+  itemRemark              String?  @map("item_remark")
+
+  budgetPlanAmount        BigInt   @map("budget_plan_amount")
+  budgetRealisasiAmount   BigInt   @map("budget_realisasi_amount")
+  budgetRemainingAmount   BigInt   @map("budget_remaining_amount")
+
+  transactions            TransactionCapex[]
+
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  @@map("budget_plan_capex")
+}
+
+//
+// ==========================
+// TRANSACTION — CAPEX
+// ==========================
+model TransactionCapex {
+  id                 String   @id @default(uuid())
+  budgetPlanCapexId  String   @map("budget_plan_capex_id")
+
+  vendor             String
+  requester          String
+  noCapex            String?  @map("no_capex")
+  projectCode        String?  @map("project_code")
+  noUi               String?  @map("no_ui")
+  prNumber           String?  @map("pr_number")
+  poType             String?  @map("po_type")
+  poNumber           String?  @map("po_number")
+  documentGr         String?  @map("document_gr")
+  description        String
+  assetNumber        String?  @map("asset_number")
+  qty                Int
+  amount             BigInt
+
+  submissionDate     DateTime? @map("submission_date")
+  approvedDate       DateTime? @map("approved_date")
+  deliveryDate       DateTime? @map("delivery_date")
+
+  oc                 String?  @map("o_c")
+  ccLob              String?  @map("cc_lob")
+  status             String
+  notes              String?
+
+  budgetPlan         BudgetPlanCapex @relation(fields: [budgetPlanCapexId], references: [id])
+
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("transaction_capex")
+}
