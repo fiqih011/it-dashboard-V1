@@ -1,93 +1,154 @@
-// app/api/budget/opex/route.ts
-import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-import { generateBudgetDisplayId } from "@/lib/id-generator";
-
-const prisma = new PrismaClient();
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 /**
- * GET /api/budget/opex
- * Read-only list Budget Plan OPEX
+ * =====================================================
+ * HELPER — SERIALIZE BIGINT
+ * =====================================================
  */
-export async function GET() {
+function serializeBigInt<T>(data: T): T {
+  return JSON.parse(
+    JSON.stringify(data, (_, value) =>
+      typeof value === "bigint" ? value.toString() : value
+    )
+  );
+}
+
+/**
+ * =====================================================
+ * HELPER — GENERATE DISPLAY ID
+ * FORMAT: OP-25xxxx
+ * =====================================================
+ */
+async function generateOpexDisplayId(year: number): Promise<string> {
+  const yearShort = String(year).slice(-2);
+
+  const last = await prisma.budgetPlanOpex.findFirst({
+    where: {
+      year,
+      displayId: { startsWith: `OP-${yearShort}` },
+    },
+    orderBy: { displayId: "desc" },
+    select: { displayId: true },
+  });
+
+  const next =
+    last?.displayId
+      ? Number(last.displayId.slice(-4)) + 1
+      : 1;
+
+  return `OP-${yearShort}${String(next).padStart(4, "0")}`;
+}
+
+/**
+ * =====================================================
+ * GET — LIST BUDGET PLAN OPEX (UNTUK TABLE)
+ * =====================================================
+ */
+export async function GET(req: NextRequest) {
   try {
-    const rows = await prisma.budgetPlanOpex.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        displayId: true,
-        year: true,
-        coa: true,
-        category: true,
-        component: true,
-        budgetPlanAmount: true,
-        budgetRealisasiAmount: true,
-        budgetRemainingAmount: true,
-        createdAt: true,
-      },
-    });
+    const { searchParams } = new URL(req.url);
 
-    // BigInt → string (JSON safe)
-    const data = rows.map((row) => ({
-      ...row,
-      budgetPlanAmount: row.budgetPlanAmount.toString(),
-      budgetRealisasiAmount: row.budgetRealisasiAmount.toString(),
-      budgetRemainingAmount: row.budgetRemainingAmount.toString(),
-    }));
+    const page = Number(searchParams.get("page") ?? 1);
+    const pageSize = Number(searchParams.get("pageSize") ?? 10);
 
-    return NextResponse.json({ data }, { status: 200 });
+    const year = searchParams.get("year");
+    const id = searchParams.get("id");
+    const coa = searchParams.get("coa");
+    const component = searchParams.get("component");
+
+    const where: any = {};
+    if (year) where.year = Number(year);
+    if (id) where.displayId = { contains: id };
+    if (coa) where.coa = { contains: coa };
+    if (component)
+      where.component = { contains: component, mode: "insensitive" };
+
+    const [data, total] = await Promise.all([
+      prisma.budgetPlanOpex.findMany({
+        where,
+        orderBy: { displayId: "asc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.budgetPlanOpex.count({ where }),
+    ]);
+
+    return NextResponse.json(
+      serializeBigInt({ data, total })
+    );
   } catch (error) {
     console.error("GET OPEX ERROR:", error);
     return NextResponse.json(
-      { error: "Gagal mengambil data Budget Plan OPEX." },
+      { error: "Gagal mengambil data Budget Plan OPEX" },
       { status: 500 }
     );
   }
 }
 
 /**
- * POST /api/budget/opex
- * Create Budget Plan OPEX
+ * =====================================================
+ * POST — CREATE / UPDATE (SUDAH FIX & DIKUNCI)
+ * =====================================================
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
     const {
+      id,
+      year,
       coa,
       category,
       component,
       budgetPlanAmount,
-    } = body as {
-      coa?: string;
-      category?: string;
-      component?: string;
-      budgetPlanAmount?: number | string;
-    };
+    } = body;
 
     if (
+      !year ||
       !coa ||
       !category ||
       !component ||
-      budgetPlanAmount === undefined ||
-      budgetPlanAmount === null
+      budgetPlanAmount === undefined
     ) {
       return NextResponse.json(
-        { error: "Field wajib belum lengkap." },
+        { error: "Field wajib belum lengkap" },
         { status: 400 }
       );
     }
 
     const planAmount = BigInt(budgetPlanAmount);
-    if (planAmount <= 0n) {
-      return NextResponse.json(
-        { error: "Budget plan harus lebih dari 0." },
-        { status: 400 }
-      );
+
+    // ================= UPDATE =================
+    if (id) {
+      const existing = await prisma.budgetPlanOpex.findUnique({
+        where: { id },
+      });
+
+      if (!existing) {
+        return NextResponse.json(
+          { error: "Data tidak ditemukan" },
+          { status: 404 }
+        );
+      }
+
+      const updated = await prisma.budgetPlanOpex.update({
+        where: { id },
+        data: {
+          coa,
+          category,
+          component,
+          budgetPlanAmount: planAmount,
+          budgetRemainingAmount:
+            planAmount - existing.budgetRealisasiAmount,
+        },
+      });
+
+      return NextResponse.json(serializeBigInt(updated));
     }
 
-    const displayId = await generateBudgetDisplayId("OPEX");
-    const year = new Date().getFullYear();
+    // ================= CREATE =================
+    const displayId = await generateOpexDisplayId(year);
 
     const created = await prisma.budgetPlanOpex.create({
       data: {
@@ -97,25 +158,16 @@ export async function POST(req: Request) {
         category,
         component,
         budgetPlanAmount: planAmount,
-        budgetRealisasiAmount: 0n,
+        budgetRealisasiAmount: BigInt(0),
         budgetRemainingAmount: planAmount,
       },
     });
 
-    return NextResponse.json(
-      {
-        message: "Budget Plan OPEX berhasil dibuat.",
-        data: {
-          id: created.id,
-          displayId: created.displayId,
-        },
-      },
-      { status: 201 }
-    );
+    return NextResponse.json(serializeBigInt(created));
   } catch (error) {
-    console.error("CREATE OPEX ERROR:", error);
+    console.error("POST OPEX ERROR:", error);
     return NextResponse.json(
-      { error: "Terjadi kesalahan saat membuat Budget Plan OPEX." },
+      { error: "Gagal menyimpan Budget Plan OPEX" },
       { status: 500 }
     );
   }

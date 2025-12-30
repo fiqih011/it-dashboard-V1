@@ -6,8 +6,13 @@ import { usePathname } from "next/navigation";
 
 const MENU = [
   { label: "Dashboard", href: "/" },
-  { label: "Tabel Budget Plan", href: "/table" },
-  { label: "Tabel Transaksi", href: "/table/transactions" },
+
+  // 🔹 Budget Plan — default ke OPEX
+  { label: "Tabel Budget Plan", href: "/budget-plan/opex" },
+
+  // 🔹 Transaksi — default ke OPEX
+  { label: "Tabel Transaksi", href: "/transactions/opex" },
+
   { label: "Input Budget", href: "/input" },
 ];
 
@@ -15,7 +20,9 @@ function isActive(pathname: string, href: string) {
   if (href === "/") {
     return pathname === "/";
   }
-  return pathname.startsWith(href);
+
+  // aktif juga untuk sub-route
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export default function Sidebar() {

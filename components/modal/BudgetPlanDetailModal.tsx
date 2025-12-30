@@ -1,49 +1,56 @@
 "use client";
 
-import Modal from "@/components/ui/Modal";
+import type { BudgetPlanOpex } from "@prisma/client";
 
 type Props = {
   open: boolean;
-  data: any;
-  transactions: any[];
+  data: BudgetPlanOpex;
   onClose: () => void;
 };
 
 export default function BudgetPlanDetailModal({
   open,
   data,
-  transactions,
   onClose,
 }: Props) {
+  if (!open) return null;
+
   return (
-    <Modal open={open} onClose={onClose} title="Detail Budget Plan">
-      <div className="space-y-4 text-sm">
-        <div>
-          <div>ID: {data.displayId}</div>
-          <div>COA / Item: {data.coaOrItem}</div>
-          <div>Component: {data.componentOrDescription}</div>
-          <div>Plan: {data.budgetPlan}</div>
-          <div>Used: {data.budgetRealisasi}</div>
-          <div>Remaining: {data.budgetRemaining}</div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded w-full max-w-2xl p-6">
+        <h2 className="text-lg font-semibold mb-4">
+          Detail Transaksi OPEX
+        </h2>
+
+        <div className="space-y-2 text-sm">
+          <div>
+            <strong>ID:</strong> {data.displayId}
+          </div>
+          <div>
+            <strong>COA:</strong> {data.coa}
+          </div>
+          <div>
+            <strong>Category:</strong> {data.category}
+          </div>
+          <div>
+            <strong>Component:</strong> {data.component}
+          </div>
         </div>
 
-        <div>
-          <div className="font-semibold mb-1">Transaksi</div>
-          {transactions.length === 0 ? (
-            <div className="text-gray-500">
-              Tidak ada transaksi.
-            </div>
-          ) : (
-            <ul className="list-disc ml-4">
-              {transactions.map((t, i) => (
-                <li key={i}>
-                  {t.date} — {t.description} — {t.amount}
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="mt-6 text-gray-500 text-sm">
+          Data transaksi OPEX akan ditampilkan di sini
+          (read-only).
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm bg-gray-600 text-white rounded hover:bg-gray-700"
+          >
+            Tutup
+          </button>
         </div>
       </div>
-    </Modal>
+    </div>
   );
 }
