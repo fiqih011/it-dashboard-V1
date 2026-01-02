@@ -65,10 +65,10 @@ export default function BudgetPlanTable({
                 <ActionCell
                   onEdit={() => onEdit(row)}
                   onInput={() =>
-                    router.push(
-                      `/input/transaction?type=OPEX&id=${row.id}`
-                    )
-                  }
+                router.push(
+                `/input/transaction/opex?id=${row.id}&coa=${row.coa}`
+                  )
+                }
                   onDetail={() => onDetail(row)}
                 />
               </td>

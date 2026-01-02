@@ -1,32 +1,77 @@
-// components/layout/Sidebar.tsx
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
-const MENU = [
-  { label: "Dashboard", href: "/" },
+type MenuItem = {
+  label: string;
+  href: string;
+};
 
-  // 🔹 Budget Plan — default ke OPEX
-  { label: "Tabel Budget Plan", href: "/budget-plan/opex" },
+type MenuGroup = {
+  key: string;
+  label: string;
+  items: MenuItem[];
+};
 
-  // 🔹 Transaksi — default ke OPEX
-  { label: "Tabel Transaksi", href: "/transactions/opex" },
-
-  { label: "Input Budget", href: "/input" },
+const MENU: MenuGroup[] = [
+  {
+    key: "budget-plan",
+    label: "Tabel Budget Plan",
+    items: [
+      { label: "OPEX", href: "/budget-plan/opex" },
+      { label: "CAPEX", href: "/budget-plan/capex" },
+    ],
+  },
+  {
+    key: "transactions",
+    label: "Tabel Transaksi",
+    items: [
+      { label: "OPEX", href: "/transactions/opex" },
+      { label: "CAPEX", href: "/transactions/capex" },
+    ],
+  },
+  {
+    key: "input",
+    label: "Input",
+    items: [
+      { label: "Budget Plan OPEX", href: "/input/budget-plan/opex" },
+      { label: "Budget Plan CAPEX", href: "/input/budget-plan/capex" },
+      { label: "Transaction OPEX", href: "/input/transaction/opex" },
+      { label: "Transaction CAPEX", href: "/input/transaction/capex" },
+    ],
+  },
 ];
 
 function isActive(pathname: string, href: string) {
-  if (href === "/") {
-    return pathname === "/";
-  }
-
-  // aktif juga untuk sub-route
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export default function Sidebar() {
   const pathname = usePathname();
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+  // 🔹 Auto-open group jika salah satu child aktif
+  useEffect(() => {
+    const initialState: Record<string, boolean> = {};
+
+    MENU.forEach((group) => {
+      initialState[group.key] = group.items.some((item) =>
+        isActive(pathname, item.href)
+      );
+    });
+
+    setOpenGroups((prev) => ({ ...prev, ...initialState }));
+  }, [pathname]);
+
+  function toggleGroup(key: string) {
+    setOpenGroups((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  }
 
   return (
     <aside className="w-64 shrink-0 border-r bg-white">
@@ -34,24 +79,64 @@ export default function Sidebar() {
         IT Budgeting
       </div>
 
-      <nav className="p-2 space-y-1">
-        {MENU.map((item) => {
-          const active = isActive(pathname, item.href);
+      <nav className="p-3 space-y-3 text-sm">
+        {/* Dashboard */}
+        <Link
+          href="/dashboard"
+          className={`block rounded px-4 py-2 transition
+            ${
+              pathname === "/dashboard"
+                ? "bg-blue-600 text-white"
+                : "text-gray-700 hover:bg-gray-100"
+            }
+          `}
+        >
+          Dashboard
+        </Link>
+
+        {/* Grouped Menus */}
+        {MENU.map((group) => {
+          const isOpen = openGroups[group.key];
 
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`block rounded px-4 py-2 text-sm transition
-                ${
-                  active
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-700 hover:bg-gray-100"
-                }
-              `}
-            >
-              {item.label}
-            </Link>
+            <div key={group.key}>
+              {/* Group Header */}
+              <button
+                type="button"
+                onClick={() => toggleGroup(group.key)}
+                className="flex w-full items-center justify-between rounded px-4 py-2 text-gray-800 hover:bg-gray-100"
+              >
+                <span>{group.label}</span>
+                <span className="text-xs">
+                  {isOpen ? "▾" : "▸"}
+                </span>
+              </button>
+
+              {/* Group Items */}
+              {isOpen && (
+                <div className="mt-1 space-y-1 pl-2">
+                  {group.items.map((item) => {
+                    const active = isActive(pathname, item.href);
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`block rounded px-4 py-2 transition
+                          ${
+                            active
+                              ? "bg-blue-600 text-white"
+                              : "text-gray-700 hover:bg-gray-100"
+                          }
+                        `}
+                      >
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>

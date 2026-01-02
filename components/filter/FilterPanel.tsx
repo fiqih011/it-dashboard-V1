@@ -1,92 +1,112 @@
 "use client";
 
-export type BudgetPlanFilter = {
-  year: string;
-  id: string;
-  coa: string;
-  component: string;
+import Input from "@/components/ui/Input";
+import Button from "@/components/ui/Button";
+import Select from "@/components/ui/Select";
+
+/**
+ * ===============================
+ * TYPES
+ * ===============================
+ */
+
+export type FilterValues = {
+  year?: string;
+  budgetId?: string;
+  vendor?: string;
+  status?: string;
+  coa?: string;
+  description?: string;
 };
 
-export type FilterPanelProps = {
-  value: BudgetPlanFilter;
-  onChange: (value: BudgetPlanFilter) => void;
+type Props = {
+  value: FilterValues;
+  onChange: (value: FilterValues) => void;
   onSearch: () => void;
   onReset: () => void;
 };
+
+/**
+ * ===============================
+ * COMPONENT
+ * ===============================
+ * Reusable filter panel for:
+ * - Budget Plan
+ * - Transaction OPEX
+ * - Transaction CAPEX
+ *
+ * Tidak tahu data / API / table
+ */
 
 export default function FilterPanel({
   value,
   onChange,
   onSearch,
   onReset,
-}: FilterPanelProps) {
+}: Props) {
   return (
-    <div className="border rounded p-4 space-y-3 bg-white">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div>
-          <label className="text-xs text-gray-600">Tahun</label>
-          <input
-            className="w-full border rounded px-2 py-1 text-sm"
-            value={value.year}
-            onChange={(e) =>
-              onChange({ ...value, year: e.target.value })
-            }
-          />
-        </div>
+    <div className="border rounded p-4 bg-white space-y-4">
+      {/* FILTER FIELDS */}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+        <Input
+          label="Tahun"
+          value={value.year ?? ""}
+          onChange={(v) =>
+            onChange({ ...value, year: v })
+          }
+        />
 
-        <div>
-          <label className="text-xs text-gray-600">ID</label>
-          <input
-            className="w-full border rounded px-2 py-1 text-sm"
-            value={value.id}
-            onChange={(e) =>
-              onChange({ ...value, id: e.target.value })
-            }
-          />
-        </div>
+        <Input
+          label="Budget ID"
+          value={value.budgetId ?? ""}
+          onChange={(v) =>
+            onChange({ ...value, budgetId: v })
+          }
+        />
 
-        <div>
-          <label className="text-xs text-gray-600">COA</label>
-          <input
-            className="w-full border rounded px-2 py-1 text-sm"
-            value={value.coa}
-            onChange={(e) =>
-              onChange({ ...value, coa: e.target.value })
-            }
-          />
-        </div>
+        <Input
+          label="Vendor"
+          value={value.vendor ?? ""}
+          onChange={(v) =>
+            onChange({ ...value, vendor: v })
+          }
+        />
 
-        <div>
-          <label className="text-xs text-gray-600">
-            Component
-          </label>
-          <input
-            className="w-full border rounded px-2 py-1 text-sm"
-            value={value.component}
-            onChange={(e) =>
-              onChange({
-                ...value,
-                component: e.target.value,
-              })
-            }
-          />
-        </div>
+        <Select
+          label="Status"
+          value={value.status ?? ""}
+          options={["", "OPEN", "CLOSED"]}
+          onChange={(v) =>
+            onChange({ ...value, status: v })
+          }
+        />
+
+        <Input
+          label="COA"
+          value={value.coa ?? ""}
+          onChange={(v) =>
+            onChange({ ...value, coa: v })
+          }
+        />
+
+        <Input
+          label="Description"
+          value={value.description ?? ""}
+          onChange={(v) =>
+            onChange({ ...value, description: v })
+          }
+        />
       </div>
 
+      {/* ACTION BUTTONS */}
       <div className="flex gap-2">
-        <button
-          onClick={onSearch}
-          className="px-3 py-1 text-sm bg-blue-600 text-white rounded"
-        >
+        <Button variant="primary" onClick={onSearch}>
           Search
-        </button>
+        </Button>
 
-        <button
-          onClick={onReset}
-          className="px-3 py-1 text-sm bg-gray-200 rounded"
-        >
+        <Button variant="secondary" onClick={onReset}>
           Reset
-        </button>
+        </Button>
       </div>
     </div>
   );
