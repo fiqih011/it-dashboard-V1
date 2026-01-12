@@ -1,67 +1,90 @@
-// app/(app)/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import StatCard from "@/components/dashboard/StatCard";
-import Button from "@/components/ui/Button";
+import { DollarSign, TrendingUp, CheckCircle } from "lucide-react";
 
-type Summary = {
-  plan: string;
-  used: string;
-  remaining: string;
-};
+import SummaryCard from "@/components/ui/SummaryCard";
+import BudgetUsageTable from "@/components/dashboard/BudgetUsageTable";
+import StatusLegend from "@/components/ui/StatusLegend";
+import type { BudgetUsageItem } from "@/components/dashboard/BudgetUsageTable";
 
-type DashboardData = {
-  opex: Summary;
-  capex: Summary;
-  total: Summary;
-};
-
-export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
+export default function DashboardOpexPage() {
+  const [data, setData] = useState<BudgetUsageItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch("/api/dashboard");
-        const json = await res.json();
-        setData(json);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    fetchData();
   }, []);
 
-  if (loading) {
-    return <div className="p-6 text-sm text-gray-600">Loading...</div>;
+  async function fetchData() {
+    setLoading(true);
+    const res = await fetch("/api/dashboard/opex");
+    const json = await res.json();
+    setData(json);
+    setLoading(false);
   }
 
-  if (!data) {
-    return (
-      <div className="p-6 text-sm text-red-600">
-        Gagal memuat data dashboard.
-      </div>
-    );
-  }
+  const totalBudget = data.reduce((a, b) => a + b.totalBudget, 0);
+  const totalUsed = data.reduce((a, b) => a + b.used, 0);
+  const remaining = data.reduce((a, b) => a + b.remaining, 0);
+
+  const percent =
+    totalBudget > 0
+      ? ((totalUsed / totalBudget) * 100).toFixed(1)
+      : "0.0";
+
+  const format = (v: number) =>
+    new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(v);
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-xl font-bold">Dashboard</h1>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <StatCard title="Total Budget" value={data.total.plan} />
-        <StatCard title="Total Terpakai" value={data.total.used} />
-        <StatCard title="Total Sisa" value={data.total.remaining} />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-800">
+          Dashboard OPEX
+        </h1>
+        <p className="text-gray-600">
+          Ringkasan penggunaan budget operasional
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <StatCard title="OPEX - Budget" value={data.opex.plan} />
-        <StatCard title="OPEX - Terpakai" value={data.opex.used} />
-        <StatCard title="CAPEX - Budget" value={data.capex.plan} />
-        <StatCard title="CAPEX - Terpakai" value={data.capex.used} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <SummaryCard
+          title="Total Budget"
+          value={format(totalBudget)}
+          badge="100%"
+          color="blue"
+          icon={<DollarSign className="w-5 h-5" />}
+          loading={loading}
+        />
+        <SummaryCard
+          title="Total Realisasi"
+          value={format(totalUsed)}
+          badge={`${percent}%`}
+          color="indigo"
+          icon={<TrendingUp className="w-5 h-5" />}
+          loading={loading}
+        />
+        <SummaryCard
+          title="Remaining Budget"
+          value={format(remaining)}
+          badge={`${(100 - Number(percent)).toFixed(1)}%`}
+          color="emerald"
+          icon={<CheckCircle className="w-5 h-5" />}
+          loading={loading}
+        />
       </div>
+
+      <BudgetUsageTable
+        data={data}
+        loading={loading}
+        onRefresh={fetchData}
+      />
+
+      <StatusLegend />
     </div>
   );
 }

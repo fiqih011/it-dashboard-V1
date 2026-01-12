@@ -23,7 +23,7 @@ export default function BudgetPlanTable({
       <table className="min-w-full text-sm">
         <thead className="bg-gray-100">
           <tr>
-            <th className="px-3 py-2 text-left">ID</th>
+            <th className="px-3 py-2 text-left">Budget ID</th>
             <th className="px-3 py-2 text-left">COA</th>
             <th className="px-3 py-2 text-left">Category</th>
             <th className="px-3 py-2 text-left">Component</th>
@@ -65,10 +65,10 @@ export default function BudgetPlanTable({
                 <ActionCell
                   onEdit={() => onEdit(row)}
                   onInput={() =>
-                router.push(
-                `/input/transaction/opex?id=${row.id}&coa=${row.coa}`
-                  )
-                }
+                    router.push(
+                      `/input/transaction/opex?budgetId=${row.id}`
+                    )
+                  }
                   onDetail={() => onDetail(row)}
                 />
               </td>

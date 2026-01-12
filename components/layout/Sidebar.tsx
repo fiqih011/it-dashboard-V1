@@ -17,6 +17,15 @@ type MenuGroup = {
 
 const MENU: MenuGroup[] = [
   {
+    key: "dashboard",
+    label: "Dashboard",
+    items: [
+      { label: "OPEX", href: "/dashboard/opex" },
+      // future:
+      // { label: "CAPEX", href: "/dashboard/capex" },
+    ],
+  },
+  {
     key: "budget-plan",
     label: "Tabel Budget Plan",
     items: [
@@ -50,7 +59,6 @@ function isActive(pathname: string, href: string) {
 
 export default function Sidebar() {
   const pathname = usePathname();
-
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   // 🔹 Auto-open group jika salah satu child aktif
@@ -80,21 +88,6 @@ export default function Sidebar() {
       </div>
 
       <nav className="p-3 space-y-3 text-sm">
-        {/* Dashboard */}
-        <Link
-          href="/dashboard"
-          className={`block rounded px-4 py-2 transition
-            ${
-              pathname === "/dashboard"
-                ? "bg-blue-600 text-white"
-                : "text-gray-700 hover:bg-gray-100"
-            }
-          `}
-        >
-          Dashboard
-        </Link>
-
-        {/* Grouped Menus */}
         {MENU.map((group) => {
           const isOpen = openGroups[group.key];
 
@@ -107,9 +100,7 @@ export default function Sidebar() {
                 className="flex w-full items-center justify-between rounded px-4 py-2 text-gray-800 hover:bg-gray-100"
               >
                 <span>{group.label}</span>
-                <span className="text-xs">
-                  {isOpen ? "▾" : "▸"}
-                </span>
+                <span className="text-xs">{isOpen ? "▾" : "▸"}</span>
               </button>
 
               {/* Group Items */}
@@ -122,13 +113,11 @@ export default function Sidebar() {
                       <Link
                         key={item.href}
                         href={item.href}
-                        className={`block rounded px-4 py-2 transition
-                          ${
-                            active
-                              ? "bg-blue-600 text-white"
-                              : "text-gray-700 hover:bg-gray-100"
-                          }
-                        `}
+                        className={`block rounded px-4 py-2 transition ${
+                          active
+                            ? "bg-blue-600 text-white"
+                            : "text-gray-700 hover:bg-gray-100"
+                        }`}
                       >
                         {item.label}
                       </Link>

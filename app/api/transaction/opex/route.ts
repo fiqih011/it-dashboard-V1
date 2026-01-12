@@ -1,271 +1,252 @@
-// app/api/transaction/opex/route.ts
-import { NextResponse } from "next/server";
-import { PrismaClient, Prisma } from "@prisma/client";
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
-const prisma = new PrismaClient();
-
-/**
- * ======================================================
- * UTIL — Generate Transaction Display ID
- * Format: TRX-OP-YY-XXXX
- * Sequence reset per tahun (OPEX)
- * ======================================================
- */
-async function generateTransactionDisplayId(
-  tx: Prisma.TransactionClient,
-  year: number
-): Promise<string> {
-  const yy = String(year).slice(-2);
-
-  const lastTrx = await tx.transactionOpex.findFirst({
-    where: {
-      displayId: {
-        startsWith: `TRX-OP-${yy}-`,
-      },
-    },
-    orderBy: {
-      displayId: "desc",
-    },
-    select: {
-      displayId: true,
-    },
-  });
-
-  let nextSeq = 1;
-
-  if (lastTrx?.displayId) {
-    const parts = lastTrx.displayId.split("-");
-    const lastSeq = Number(parts[3]);
-    if (!Number.isNaN(lastSeq)) {
-      nextSeq = lastSeq + 1;
-    }
-  }
-
-  const seq = String(nextSeq).padStart(4, "0");
-  return `TRX-OP-${yy}-${seq}`;
-}
-
-/**
- * ======================================================
- * GET /api/transaction/opex
- * ======================================================
- */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const rows = await prisma.transactionOpex.findMany({
-      orderBy: { createdAt: "desc" },
+    const { searchParams } = new URL(req.url);
+
+    // =========================
+    // PAGINATION
+    // =========================
+    const page = Math.max(Number(searchParams.get("page")) || 1, 1);
+    const pageSize = Math.max(
+      Number(searchParams.get("pageSize")) || 10,
+      1
+    );
+
+    const skip = (page - 1) * pageSize;
+    const take = pageSize;
+
+    // =========================
+    // FILTER PARAMS
+    // =========================
+    const year = searchParams.get("year") ?? undefined;
+    const transactionId = searchParams.get("transactionId") ?? undefined;
+    const budgetId = searchParams.get("budgetId") ?? undefined;
+    const vendor = searchParams.get("vendor") ?? undefined;
+    const requester = searchParams.get("requester") ?? undefined;
+    const description = searchParams.get("description") ?? undefined;
+
+    // =========================
+    // WHERE (TYPE SAFE)
+    // =========================
+    const where: Prisma.TransactionOpexWhereInput = {
+      ...(year && {
+        submissionDate: {
+          gte: new Date(`${year}-01-01`),
+          lte: new Date(`${year}-12-31`),
+        },
+      }),
+      ...(transactionId && {
+        displayId: {
+          contains: transactionId,
+        },
+      }),
+      ...(budgetId && {
+        budgetPlan: {
+          displayId: {
+            contains: budgetId,
+          },
+        },
+      }),
+      ...(vendor && {
+        vendor: {
+          contains: vendor,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      }),
+      ...(requester && {
+        requester: {
+          contains: requester,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      }),
+      ...(description && {
+        description: {
+          contains: description,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      }),
+    };
+
+    // =========================
+    // TOTAL COUNT
+    // =========================
+    const total = await prisma.transactionOpex.count({
+      where,
+    });
+
+    // =========================
+    // DATA (PAGINATION)
+    // =========================
+    const data = await prisma.transactionOpex.findMany({
+      where,
+      skip,
+      take,
+      orderBy: {
+        createdAt: "desc",
+      },
       include: {
         budgetPlan: {
           select: {
             displayId: true,
-            coa: true,
-            category: true,
-            component: true,
           },
         },
       },
     });
 
-    const data = rows.map((r) => ({
-      id: r.id, // UUID internal
-      displayId: r.displayId, // Transaction ID (human readable)
-      budgetPlanOpexId: r.budgetPlanOpexId,
-      budgetPlanDisplayId: r.budgetPlan.displayId,
-      coa: r.coa,
-      category: r.budgetPlan.category,
-      component: r.budgetPlan.component,
-      vendor: r.vendor,
-      requester: r.requester,
-      prNumber: r.prNumber,
-      poType: r.poType,
-      poNumber: r.poNumber,
-      documentGr: r.documentGr,
-      description: r.description,
-      qty: r.qty,
-      amount: r.amount.toString(),
-      submissionDate: r.submissionDate,
-      approvedDate: r.approvedDate,
-      deliveryDate: r.deliveryDate,
-      oc: r.oc,
-      ccLob: r.ccLob,
-      status: r.status,
-      notes: r.notes,
-    }));
+    // =========================
+    // RESPONSE (BIGINT SAFE)
+    // =========================
+    return NextResponse.json({
+      data: data.map((trx) => ({
+        id: trx.id,
+        displayId: trx.displayId,
+        budgetPlanDisplayId: trx.budgetPlan.displayId,
 
-    return NextResponse.json({ data }, { status: 200 });
-  } catch (error) {
-    console.error("GET TRANSACTION OPEX ERROR:", error);
+        vendor: trx.vendor,
+        requester: trx.requester,
+        prNumber: trx.prNumber,
+        poType: trx.poType,
+        poNumber: trx.poNumber,
+        documentGr: trx.documentGr,
+
+        description: trx.description,
+        qty: trx.qty,
+        amount: trx.amount.toString(), // ✅ FIX BIGINT
+
+        submissionDate: trx.submissionDate,
+        approvedDate: trx.approvedDate,
+        deliveryDate: trx.deliveryDate,
+
+        oc: trx.oc,
+        ccLob: trx.ccLob,
+        coa: trx.coa,
+        status: trx.status,
+        notes: trx.notes,
+      })),
+      total,
+    });
+  } catch (err) {
+    console.error("[GET TRANSACTION OPEX ERROR]", err);
     return NextResponse.json(
-      { error: "Gagal mengambil data Transaksi OPEX." },
+      { error: "Gagal mengambil data transaksi" },
       { status: 500 }
     );
   }
 }
 
 /**
- * ======================================================
- * POST /api/transaction/opex
- * CREATE transaksi OPEX (atomic)
- * ======================================================
+ * =========================================================
+ * POST — CREATE TRANSACTION OPEX WITH BUDGET UPDATE
+ * =========================================================
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const {
-      budgetPlanOpexId,
-      vendor,
-      requester,
-      prNumber,
-      poType,
-      poNumber,
-      documentGr,
-      description,
-      qty,
-      amount,
-      submissionDate,
-      approvedDate,
-      deliveryDate,
-      oc,
-      ccLob,
-      coa,
-      status,
-      notes,
-    } = body as {
-      budgetPlanOpexId: string;
-      vendor: string;
-      requester: string;
-      prNumber?: string;
-      poType?: string;
-      poNumber?: string;
-      documentGr?: string;
-      description: string;
-      qty: number;
-      amount: number | string;
-      submissionDate?: string;
-      approvedDate?: string;
-      deliveryDate?: string;
-      oc?: string;
-      ccLob?: string;
-      coa?: string;
-      status?: string;
-      notes?: string;
-    };
-
-    if (
-      !budgetPlanOpexId ||
-      !vendor ||
-      !requester ||
-      !description ||
-      qty <= 0 ||
-      amount === undefined ||
-      amount === null
-    ) {
-      return NextResponse.json(
-        { error: "Field wajib belum lengkap / tidak valid." },
-        { status: 400 }
-      );
-    }
-
-    const trxAmount = BigInt(amount);
-    if (trxAmount <= 0n) {
-      return NextResponse.json(
-        { error: "Amount harus lebih dari 0." },
-        { status: 400 }
-      );
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
-      const plan = await tx.budgetPlanOpex.findUnique({
-        where: { id: budgetPlanOpexId },
-      });
-
-      if (!plan) throw new Error("BUDGET_PLAN_NOT_FOUND");
-      if (coa && coa !== plan.coa) throw new Error("COA_MISMATCH");
-      if (plan.budgetRemainingAmount < trxAmount)
-        throw new Error("INSUFFICIENT_BUDGET");
-
-      const trxDate = submissionDate
-        ? new Date(submissionDate)
-        : new Date();
-
-      const displayId = await generateTransactionDisplayId(
-        tx,
-        trxDate.getFullYear()
-      );
-
-      const trx = await tx.transactionOpex.create({
-        data: {
-          displayId,
-          budgetPlanOpexId,
-          coa: plan.coa,
-          vendor,
-          requester,
-          prNumber,
-          poType,
-          poNumber,
-          documentGr,
-          description,
-          qty,
-          amount: trxAmount,
-          submissionDate: submissionDate ? new Date(submissionDate) : null,
-          approvedDate: approvedDate ? new Date(approvedDate) : null,
-          deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
-          oc,
-          ccLob,
-          status: status ?? "OPEN",
-          notes,
-        },
-      });
-
-      await tx.budgetPlanOpex.update({
-        where: { id: budgetPlanOpexId },
-        data: {
-          budgetRealisasiAmount:
-            plan.budgetRealisasiAmount + trxAmount,
-          budgetRemainingAmount:
-            plan.budgetRemainingAmount - trxAmount,
-        },
-      });
-
-      return trx;
+    // 1️⃣ Validasi budget plan exists
+    const budgetPlan = await prisma.budgetPlanOpex.findUnique({
+      where: { displayId: body.budgetId },
+      select: { 
+        id: true, 
+        budgetRemainingAmount: true 
+      },
     });
 
-    return NextResponse.json(
-      {
-        message: "Transaksi OPEX berhasil dicatat.",
-        data: {
-          id: result.id,
-          displayId: result.displayId,
-        },
-      },
-      { status: 201 }
-    );
-  } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === "BUDGET_PLAN_NOT_FOUND") {
-        return NextResponse.json(
-          { error: "Budget Plan OPEX tidak ditemukan." },
-          { status: 404 }
-        );
-      }
-      if (error.message === "COA_MISMATCH") {
-        return NextResponse.json(
-          { error: "COA transaksi tidak sesuai dengan Budget Plan." },
-          { status: 400 }
-        );
-      }
-      if (error.message === "INSUFFICIENT_BUDGET") {
-        return NextResponse.json(
-          { error: "Budget remaining tidak mencukupi." },
-          { status: 400 }
-        );
-      }
+    if (!budgetPlan) {
+      return NextResponse.json(
+        { error: "Budget plan tidak ditemukan" },
+        { status: 404 }
+      );
     }
 
-    console.error("POST TRANSACTION OPEX ERROR:", error);
+    const amount = BigInt(body.amount);
+
+    // 2️⃣ Cek apakah budget mencukupi
+    if (budgetPlan.budgetRemainingAmount < amount) {
+      return NextResponse.json(
+        { error: "Budget tidak mencukupi" },
+        { status: 400 }
+      );
+    }
+
+    // 3️⃣ Generate display ID (TRX-OP-YY-XXXX)
+    const year = new Date().getFullYear().toString().slice(-2);
+    const lastTrx = await prisma.transactionOpex.findFirst({
+      where: {
+        displayId: {
+          startsWith: `TRX-OP-${year}-`,
+        },
+      },
+      orderBy: {
+        displayId: "desc",
+      },
+    });
+
+    let nextNumber = 1;
+    if (lastTrx) {
+      const lastNumber = parseInt(lastTrx.displayId.split("-").pop() || "0");
+      nextNumber = lastNumber + 1;
+    }
+
+    const displayId = `TRX-OP-${year}-${String(nextNumber).padStart(4, "0")}`;
+
+    // 4️⃣ Create transaksi
+    await prisma.transactionOpex.create({
+      data: {
+        displayId,
+        budgetPlanOpexId: budgetPlan.id,
+        vendor: body.vendor,
+        requester: body.requester,
+        prNumber: body.prNumber || null,
+        poType: body.poType || null,
+        poNumber: body.poNumber || null,
+        documentGr: body.documentGR || null,
+        description: body.description,
+        qty: Number(body.qty),
+        amount: amount,
+
+        submissionDate: body.submissionDate
+          ? new Date(body.submissionDate)
+          : null,
+        approvedDate: body.approvedDate
+          ? new Date(body.approvedDate)
+          : null,
+        deliveryDate: body.deliveryDate
+          ? new Date(body.deliveryDate)
+          : null,
+
+        oc: body.oc || null,
+        ccLob: body.cc || null,
+        coa: body.coa,
+        status: body.status,
+        notes: body.notes || null,
+      },
+    });
+
+    // 5️⃣ Update budget plan
+    await prisma.budgetPlanOpex.update({
+      where: { id: budgetPlan.id },
+      data: {
+        budgetRealisasiAmount: {
+          increment: amount,
+        },
+        budgetRemainingAmount: {
+          decrement: amount,
+        },
+      },
+    });
+
+    return NextResponse.json({ 
+      success: true,
+      displayId 
+    });
+  } catch (err) {
+    console.error("[POST TRANSACTION OPEX ERROR]", err);
     return NextResponse.json(
-      { error: "Gagal mencatat transaksi OPEX." },
+      { error: "Gagal membuat transaksi" },
       { status: 500 }
     );
   }

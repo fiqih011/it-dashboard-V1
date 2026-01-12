@@ -11,12 +11,17 @@ import TransactionTable, {
 
 import { showError, showSuccess } from "@/lib/swal";
 
+/**
+ * =========================================
+ * FILTER STATE — TRANSACTION OPEX (FINAL)
+ * =========================================
+ */
 export type FilterState = {
   year?: string;
+  transactionId?: string;
   budgetId?: string;
   vendor?: string;
-  status?: string;
-  coa?: string;
+  requester?: string;
   description?: string;
 };
 
@@ -31,10 +36,11 @@ export default function TransactionsOpexPage() {
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
 
-  useEffect(() => {
-    fetchData();
-  }, [page, pageSize]);
-
+  /**
+   * =========================================
+   * FETCH DATA
+   * =========================================
+   */
   async function fetchData() {
     try {
       setLoading(true);
@@ -44,12 +50,15 @@ export default function TransactionsOpexPage() {
       params.set("pageSize", String(pageSize));
 
       if (filter.year) params.set("year", filter.year);
+      if (filter.transactionId) {
+        params.set("transactionId", filter.transactionId);
+      }
       if (filter.budgetId) params.set("budgetId", filter.budgetId);
       if (filter.vendor) params.set("vendor", filter.vendor);
-      if (filter.status) params.set("status", filter.status);
-      if (filter.coa) params.set("coa", filter.coa);
-      if (filter.description)
+      if (filter.requester) params.set("requester", filter.requester);
+      if (filter.description) {
         params.set("description", filter.description);
+      }
 
       const res = await fetch(
         `/api/transaction/opex?${params.toString()}`
@@ -60,8 +69,8 @@ export default function TransactionsOpexPage() {
       }
 
       const json = await res.json();
-      setRows(json.data);
-      setTotal(json.total ?? json.data.length);
+      setRows(json.data ?? []);
+      setTotal(json.total ?? 0);
     } catch (err) {
       showError(
         err instanceof Error ? err.message : "Unknown error"
@@ -71,6 +80,21 @@ export default function TransactionsOpexPage() {
     }
   }
 
+  /**
+   * =========================================
+   * EFFECTS
+   * =========================================
+   */
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize]);
+
+  /**
+   * =========================================
+   * HANDLERS
+   * =========================================
+   */
   function handleSearch() {
     setPage(1);
     fetchData();
@@ -83,8 +107,9 @@ export default function TransactionsOpexPage() {
   }
 
   async function handleDelete(id: string): Promise<boolean> {
+    // ✅ PERBAIKAN: Ganti dari ?id=${id} menjadi /${id}
     const res = await fetch(
-      `/api/transaction/opex?id=${id}`,
+      `/api/transaction/opex/${id}`,
       { method: "DELETE" }
     );
 
@@ -99,25 +124,22 @@ export default function TransactionsOpexPage() {
     return true;
   }
 
+  /**
+   * =========================================
+   * RENDER
+   * =========================================
+   */
   if (loading) {
     return <div className="p-6">Loading transaksi…</div>;
   }
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex justify-between items-center">
+      {/* HEADER */}
+      <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">
           Tabel Transaksi OPEX
         </h1>
-
-        <button
-          className="px-4 py-2 bg-blue-600 text-white rounded"
-          onClick={() =>
-            router.push("/input/transaction/opex")
-          }
-        >
-          + Input Transaksi
-        </button>
       </div>
 
       {/* FILTER */}
@@ -126,6 +148,14 @@ export default function TransactionsOpexPage() {
         onChange={setFilter}
         onSearch={handleSearch}
         onReset={handleReset}
+        fields={[
+          "year",
+          "transactionId",
+          "budgetId",
+          "vendor",
+          "requester",
+          "description",
+        ]}
       />
 
       {/* TABLE */}
@@ -143,7 +173,10 @@ export default function TransactionsOpexPage() {
         total={total}
         pageSize={pageSize}
         onPageChange={setPage}
-        onPageSizeChange={setPageSize}
+        onPageSizeChange={(n) => {
+          setPageSize(n);
+          setPage(1);
+        }}
       />
     </div>
   );

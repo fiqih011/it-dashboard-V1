@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 
 import BudgetPlanTable from "@/components/table/BudgetPlanTable";
 import PaginationBar from "@/components/table/PaginationBar";
-import FilterPanel from "@/components/filter/FilterPanel";
+import FilterPanel, {
+  FilterValues,
+} from "@/components/filter/FilterPanel";
 import EditBudgetPlanModal from "@/components/modal/EditBudgetPlanModal";
 import BudgetPlanDetailModal from "@/components/modal/BudgetPlanDetailModal";
 
@@ -17,12 +19,11 @@ export default function BudgetPlanOpexPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const [filters, setFilters] = useState({
-    year: "",
-    id: "",
-    coa: "",
-    component: "",
-  });
+  const [draftFilters, setDraftFilters] =
+    useState<FilterValues>({});
+
+  const [appliedFilters, setAppliedFilters] =
+    useState<FilterValues>({});
 
   const [editRow, setEditRow] =
     useState<BudgetPlanOpex | null>(null);
@@ -34,11 +35,14 @@ export default function BudgetPlanOpexPage() {
     const params = new URLSearchParams({
       page: String(page),
       pageSize: String(pageSize),
-      ...(filters.year && { year: filters.year }),
-      ...(filters.id && { id: filters.id }),
-      ...(filters.coa && { coa: filters.coa }),
-      ...(filters.component && {
-        component: filters.component,
+      ...(appliedFilters.year && { year: appliedFilters.year }),
+      ...(appliedFilters.budgetId && { id: appliedFilters.budgetId }),
+      ...(appliedFilters.coa && { coa: appliedFilters.coa }),
+      ...(appliedFilters.category && {
+        category: appliedFilters.category,
+      }),
+      ...(appliedFilters.component && {
+        component: appliedFilters.component,
       }),
     });
 
@@ -51,7 +55,7 @@ export default function BudgetPlanOpexPage() {
 
   useEffect(() => {
     fetchData();
-  }, [page, pageSize]);
+  }, [page, pageSize, appliedFilters]);
 
   return (
     <div className="space-y-4">
@@ -60,22 +64,24 @@ export default function BudgetPlanOpexPage() {
       </h1>
 
       <FilterPanel
-        value={filters}
-        onChange={setFilters}
+        value={draftFilters}
+        onChange={setDraftFilters}
         onSearch={() => {
           setPage(1);
-          fetchData();
+          setAppliedFilters(draftFilters);
         }}
         onReset={() => {
-          setFilters({
-            year: "",
-            id: "",
-            coa: "",
-            component: "",
-          });
+          setDraftFilters({});
+          setAppliedFilters({});
           setPage(1);
-          fetchData();
         }}
+        fields={[
+          "year",
+          "budgetId",
+          "coa",
+          "category",
+          "component",
+        ]}
       />
 
       <BudgetPlanTable

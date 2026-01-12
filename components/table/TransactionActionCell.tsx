@@ -20,12 +20,18 @@ export default function TransactionActionCell({
   }
 
   return (
-    <div className="flex gap-2 justify-center">
-      <Button variant="secondary" onClick={onEdit}>
+    <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+      <Button
+        variant="secondary"
+        onClick={onEdit}
+      >
         Edit
       </Button>
 
-      <Button variant="danger" onClick={handleDelete}>
+      <Button
+        variant="danger"
+        onClick={handleDelete}
+      >
         Delete
       </Button>
     </div>
