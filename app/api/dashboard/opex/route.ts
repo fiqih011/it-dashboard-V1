@@ -16,8 +16,8 @@ export async function GET() {
     // =====================================================
     const budgetPlans = await prisma.budgetPlanOpex.findMany({
       select: {
-        id: true,
-        displayId: true,
+        id: true,              // ✅ Internal UUID
+        displayId: true,       // ✅ Display ID (OP-250001)
         component: true,
         budgetPlanAmount: true,
       },
@@ -60,14 +60,14 @@ export async function GET() {
       const remaining = totalBudget - used;
 
       // ✅ PERCENTAGE CALCULATION (BENAR)
-      // percentage = (realisasi / budget) × 100
       const percentage =
         totalBudget > BigInt(0)
           ? Number((used * BigInt(100)) / totalBudget)
           : 0;
 
       return {
-        budgetId: plan.displayId,
+        budgetId: plan.displayId,              // ✅ Display ID untuk UI
+        budgetInternalId: plan.id,             // ✅ UUID untuk API call
         name: plan.component,
         totalBudget: Number(totalBudget),
         used: Number(used),

@@ -30,7 +30,7 @@ export default function BudgetUsageBarChart({ items }: Props) {
     <div className="bg-white rounded-xl shadow-md p-4">
       <div className="mb-3">
         <h3 className="font-semibold text-gray-800">
-          Usage per Komponen
+          Usage per componen
         </h3>
         <p className="text-xs text-gray-500">
           Persentase pemakaian budget OPEX
