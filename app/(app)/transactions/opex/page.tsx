@@ -3,62 +3,57 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import FilterPanel from "@/components/filter/FilterPanel";
+import TransactionFilter from "@/components/filter/TransactionFilter";
+import { TransactionFilterValue } from "@/components/filter/types";
+
 import PaginationBar from "@/components/table/PaginationBar";
-import TransactionTable, {
-  TransactionRow,
-} from "@/components/table/TransactionTable";
+import TransactionTable from "@/components/table/TransactionTable";
+import type { TransactionRow } from "@/components/table/TransactionTable";
 
 import { showError, showSuccess } from "@/lib/swal";
-
-/**
- * =========================================
- * FILTER STATE — TRANSACTION OPEX (FINAL)
- * =========================================
- */
-export type FilterState = {
-  year?: string;
-  transactionId?: string;
-  budgetId?: string;
-  vendor?: string;
-  requester?: string;
-  description?: string;
-};
 
 export default function TransactionsOpexPage() {
   const router = useRouter();
 
   const [rows, setRows] = useState<TransactionRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  const [filter, setFilter] = useState<FilterState>({});
+  // 🔒 FILTER STATE — STRICT & GENERIC
+  const [draftFilters, setDraftFilters] =
+    useState<TransactionFilterValue>({});
+  const [appliedFilters, setAppliedFilters] =
+    useState<TransactionFilterValue>({});
+
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
 
   /**
    * =========================================
-   * FETCH DATA
+   * FETCH DATA — GENERIC & TYPE SAFE
    * =========================================
    */
   async function fetchData() {
     try {
       setLoading(true);
 
-      const params = new URLSearchParams();
-      params.set("page", String(page));
-      params.set("pageSize", String(pageSize));
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(pageSize),
+      });
 
-      if (filter.year) params.set("year", filter.year);
-      if (filter.transactionId) {
-        params.set("transactionId", filter.transactionId);
-      }
-      if (filter.budgetId) params.set("budgetId", filter.budgetId);
-      if (filter.vendor) params.set("vendor", filter.vendor);
-      if (filter.requester) params.set("requester", filter.requester);
-      if (filter.description) {
-        params.set("description", filter.description);
-      }
+      // ✅ GENERIC FILTER → QUERY (NO HARDCODE FIELD)
+      Object.entries(appliedFilters).forEach(
+        ([key, value]) => {
+          if (
+            value !== undefined &&
+            value !== null &&
+            String(value).trim() !== ""
+          ) {
+            params.set(key, String(value));
+          }
+        }
+      );
 
       const res = await fetch(
         `/api/transaction/opex?${params.toString()}`
@@ -88,26 +83,16 @@ export default function TransactionsOpexPage() {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize]);
+  }, [page, pageSize, appliedFilters]);
 
   /**
    * =========================================
-   * HANDLERS
+   * ACTIONS
    * =========================================
    */
-  function handleSearch() {
-    setPage(1);
-    fetchData();
-  }
-
-  function handleReset() {
-    setFilter({});
-    setPage(1);
-    fetchData();
-  }
-
-  async function handleDelete(id: string): Promise<boolean> {
-    // ✅ PERBAIKAN: Ganti dari ?id=${id} menjadi /${id}
+  async function handleDelete(
+    id: string
+  ): Promise<boolean> {
     const res = await fetch(
       `/api/transaction/opex/${id}`,
       { method: "DELETE" }
@@ -137,25 +122,24 @@ export default function TransactionsOpexPage() {
     <div className="space-y-6 p-6">
       {/* HEADER */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">
+        <h1 className="text-xl font-semibold text-gray-900">
           Tabel Transaksi OPEX
         </h1>
       </div>
 
-      {/* FILTER */}
-      <FilterPanel
-        value={filter}
-        onChange={setFilter}
-        onSearch={handleSearch}
-        onReset={handleReset}
-        fields={[
-          "year",
-          "transactionId",
-          "budgetId",
-          "vendor",
-          "requester",
-          "description",
-        ]}
+      {/* FILTER — FINAL SYSTEM */}
+      <TransactionFilter
+        value={draftFilters}
+        onChange={setDraftFilters}
+        onSearch={() => {
+          setPage(1);
+          setAppliedFilters(draftFilters);
+        }}
+        onReset={() => {
+          setDraftFilters({});
+          setAppliedFilters({});
+          setPage(1);
+        }}
       />
 
       {/* TABLE */}
@@ -170,8 +154,8 @@ export default function TransactionsOpexPage() {
       {/* PAGINATION */}
       <PaginationBar
         page={page}
-        total={total}
         pageSize={pageSize}
+        total={total}
         onPageChange={setPage}
         onPageSizeChange={(n) => {
           setPageSize(n);

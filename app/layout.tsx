@@ -1,6 +1,10 @@
-// app/layout.tsx
 import "./globals.css";
-import { ToastProvider } from "@/components/ui/ToastProvider";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "IT Budgeting",
+  description: "IT Budgeting System",
+};
 
 export default function RootLayout({
   children,
@@ -9,8 +13,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="h-screen overflow-hidden">
-        <ToastProvider>{children}</ToastProvider>
+      <body className="bg-slate-50 text-gray-900">
+        {children}
       </body>
     </html>
   );

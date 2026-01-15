@@ -1,70 +1,71 @@
-// components/filter/BudgetPlanFilter.tsx
 "use client";
 
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import Select from "@/components/ui/Select";
-
-export type BudgetPlanFilterValue = {
-  year?: string;
-  id?: string;
-  coaOrItem?: string;
-  component?: string;
-};
+import { BudgetPlanFilterValue } from "./types";
+import { budgetPlanFilterConfig } from "./budgetPlan.config";
 
 type Props = {
   value: BudgetPlanFilterValue;
-  onSearch: (v: BudgetPlanFilterValue) => void;
+  onChange: (value: BudgetPlanFilterValue) => void;
+  onSearch: () => void;
   onReset: () => void;
 };
 
 export default function BudgetPlanFilter({
   value,
+  onChange,
   onSearch,
   onReset,
 }: Props) {
   return (
-    <div className="rounded-md border bg-white p-4 space-y-3">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-        <Select
-          label="Tahun"
-          value={value.year ?? ""}
-          options={["2024", "2025", "2026"]}
-          onChange={(v) =>
-            onSearch({ ...value, year: v || undefined })
-          }
-        />
+    <div className="bg-white border border-gray-200 rounded-xl p-4">
+      {/* ========================= */}
+      {/* FILTER INPUTS — 1 BARIS */}
+      {/* ========================= */}
+      <div className="grid grid-cols-12 gap-3">
+        {budgetPlanFilterConfig.map((field) => (
+          <div
+            key={String(field.key)}
+            className="col-span-2"
+          >
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              {field.label}
+            </label>
 
-        <Input
-          label="ID"
-          value={value.id ?? ""}
-          onChange={(v) =>
-            onSearch({ ...value, id: v || undefined })
-          }
-        />
-
-        <Input
-          label="COA / Item"
-          value={value.coaOrItem ?? ""}
-          onChange={(v) =>
-            onSearch({ ...value, coaOrItem: v || undefined })
-          }
-        />
-
-        <Input
-          label="Component / Description"
-          value={value.component ?? ""}
-          onChange={(v) =>
-            onSearch({ ...value, component: v || undefined })
-          }
-        />
+            <input
+              type={field.type ?? "text"}
+              placeholder={field.placeholder}
+              value={(value as any)[field.key] ?? ""}
+              onChange={(e) =>
+                onChange({
+                  ...value,
+                  [field.key]: e.target.value,
+                })
+              }
+              className="w-full h-9 px-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+        ))}
       </div>
 
-      <div className="flex gap-2">
-        <Button onClick={() => onSearch(value)}>Search</Button>
-        <Button variant="secondary" onClick={onReset}>
+      {/* ========================= */}
+      {/* ACTION BUTTONS — BARIS 2 */}
+      {/* ========================= */}
+      <div className="mt-4 flex gap-2">
+        <button
+          type="button"
+          onClick={onSearch}
+          className="h-9 px-5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          Search
+        </button>
+
+        <button
+          type="button"
+          onClick={onReset}
+          className="h-9 px-5 text-sm border border-gray-300 rounded-md hover:bg-gray-100"
+        >
           Reset
-        </Button>
+        </button>
       </div>
     </div>
   );

@@ -23,18 +23,26 @@ export default function Button({
   disabled = false,
   className = "",
 }: Props) {
-  let base =
-    "px-4 py-2 rounded text-sm font-medium transition disabled:opacity-60 disabled:cursor-not-allowed";
+  const base =
+    "inline-flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition " +
+    "focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed";
 
   let variantClass = "";
+
   if (variant === "primary") {
-    variantClass = "bg-blue-600 text-white hover:bg-blue-700";
+    variantClass =
+      "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500";
   }
+
   if (variant === "secondary") {
-    variantClass = "bg-gray-200 text-gray-800 hover:bg-gray-300";
+    // ✅ ENTERPRISE OUTLINE STYLE (TABLE-SAFE)
+    variantClass =
+      "bg-white text-gray-700 border border-gray-300 hover:bg-slate-100 focus:ring-gray-400";
   }
+
   if (variant === "danger") {
-    variantClass = "bg-red-600 text-white hover:bg-red-700";
+    variantClass =
+      "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500";
   }
 
   return (

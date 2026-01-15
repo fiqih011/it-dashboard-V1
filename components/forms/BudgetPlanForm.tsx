@@ -1,51 +1,60 @@
 "use client";
 
 import { useState } from "react";
-import { useToast } from "@/components/ui/ToastProvider";
+import { useToast } from "@/lib/swal";
 
 type Props = {
-  mode: "edit";
-  initialData: {
-    id: string;
-    displayId: string;
+  mode: "edit" | "create";
+  initialData?: {
+    id?: string;
+    displayId?: string;
     year: number;
     coa: string;
     category: string;
     component: string;
-    budgetPlanAmount: string | number;
-    budgetRealisasiAmount: string | number;
-    budgetRemainingAmount: string | number;
+    budgetPlanAmount: number;
+    budgetRealisasiAmount: number;
+    budgetRemainingAmount: number;
   };
   onSuccess: () => void;
   onCancel: () => void;
 };
 
 export default function BudgetPlanForm({
+  mode,
   initialData,
   onSuccess,
   onCancel,
 }: Props) {
   const { showToast } = useToast();
-
-  const [coa, setCoa] = useState(initialData.coa);
-  const [category, setCategory] = useState(initialData.category);
-  const [component, setComponent] = useState(initialData.component);
-  const [budgetPlanAmount, setBudgetPlanAmount] = useState(
-    String(initialData.budgetPlanAmount)
-  );
-
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit() {
+  const [form, setForm] = useState({
+    id: initialData?.id,
+    year: initialData?.year ?? new Date().getFullYear(),
+    coa: initialData?.coa ?? "",
+    category: initialData?.category ?? "",
+    component: initialData?.component ?? "",
+    budgetPlanAmount:
+      initialData?.budgetPlanAmount ?? 0,
+  });
+
+  async function handleSubmit(
+    e: React.FormEvent
+  ) {
+    e.preventDefault();
+
     if (
-      !coa ||
-      !category ||
-      !component ||
-      budgetPlanAmount === "" ||
-      budgetPlanAmount === null ||
-      budgetPlanAmount === undefined
+      !form.coa ||
+      !form.category ||
+      !form.component ||
+      form.budgetPlanAmount === null ||
+      form.budgetPlanAmount === undefined
     ) {
-      showToast("error", "Field wajib belum lengkap");
+      showToast(
+        "error",
+        "Field wajib belum lengkap"
+      );
       return;
     }
 
@@ -54,123 +63,177 @@ export default function BudgetPlanForm({
     try {
       const res = await fetch("/api/budget/opex", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: initialData.id,
-          year: initialData.year,
-          coa,
-          category,
-          component,
-          budgetPlanAmount: Number(budgetPlanAmount), // ✅ 0 boleh
-        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
       });
 
       const json = await res.json();
 
       if (!res.ok) {
-        throw new Error(json?.error ?? "Gagal update data");
+        throw new Error(
+          json?.error ?? "Gagal menyimpan data"
+        );
       }
 
-      showToast("success", "Budget Plan OPEX berhasil diperbarui");
+      showToast(
+        "success",
+        mode === "edit"
+          ? "Budget Plan OPEX berhasil diperbarui"
+          : "Budget Plan OPEX berhasil dibuat"
+      );
+
       onSuccess();
     } catch (err: any) {
-      showToast("error", err.message);
+      showToast(
+        "error",
+        err?.message ?? "Terjadi kesalahan"
+      );
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="space-y-4">
-      {/* ID */}
-      <div>
-        <label className="text-sm text-gray-600">ID</label>
-        <input
-          disabled
-          value={initialData.displayId}
-          className="w-full mt-1 px-3 py-2 border rounded bg-gray-100"
-        />
-      </div>
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4"
+    >
+      {/* DISPLAY ID */}
+      {initialData?.displayId && (
+        <div>
+          <label className="text-sm text-gray-600">
+            Budget ID
+          </label>
+          <input
+            disabled
+            value={initialData.displayId}
+            className="w-full mt-1 px-3 py-2 border rounded bg-gray-100"
+          />
+        </div>
+      )}
 
       <div>
-        <label className="text-sm">COA</label>
+        <label className="text-sm font-medium">
+          COA
+        </label>
         <input
-          value={coa}
-          onChange={(e) => setCoa(e.target.value)}
           className="w-full mt-1 px-3 py-2 border rounded"
+          value={form.coa}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              coa: e.target.value,
+            })
+          }
+          required
         />
       </div>
 
       <div>
-        <label className="text-sm">Category</label>
+        <label className="text-sm font-medium">
+          Category
+        </label>
         <input
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
           className="w-full mt-1 px-3 py-2 border rounded"
+          value={form.category}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              category: e.target.value,
+            })
+          }
+          required
         />
       </div>
 
       <div>
-        <label className="text-sm">Component</label>
+        <label className="text-sm font-medium">
+          Component
+        </label>
         <input
-          value={component}
-          onChange={(e) => setComponent(e.target.value)}
           className="w-full mt-1 px-3 py-2 border rounded"
+          value={form.component}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              component: e.target.value,
+            })
+          }
+          required
         />
       </div>
 
       <div>
-        <label className="text-sm">Budget Plan</label>
+        <label className="text-sm font-medium">
+          Budget Plan
+        </label>
         <input
           type="number"
-          value={budgetPlanAmount}
-          onChange={(e) => setBudgetPlanAmount(e.target.value)}
           className="w-full mt-1 px-3 py-2 border rounded"
+          value={form.budgetPlanAmount}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              budgetPlanAmount: Number(
+                e.target.value
+              ),
+            })
+          }
+          required
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm">Budget Realisasi</label>
-          <input
-            disabled
-            value={Number(
-              initialData.budgetRealisasiAmount
-            ).toLocaleString()}
-            className="w-full mt-1 px-3 py-2 border rounded bg-gray-100"
-          />
-        </div>
+      {/* READ ONLY INFO */}
+      {initialData && (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm text-gray-600">
+              Budget Realisasi
+            </label>
+            <input
+              disabled
+              value={Number(
+                initialData.budgetRealisasiAmount
+              ).toLocaleString("id-ID")}
+              className="w-full mt-1 px-3 py-2 border rounded bg-gray-100"
+            />
+          </div>
 
-        <div>
-          <label className="text-sm">Budget Remaining</label>
-          <input
-            disabled
-            value={Number(
-              initialData.budgetRemainingAmount
-            ).toLocaleString()}
-            className="w-full mt-1 px-3 py-2 border rounded bg-gray-100"
-          />
+          <div>
+            <label className="text-sm text-gray-600">
+              Budget Remaining
+            </label>
+            <input
+              disabled
+              value={Number(
+                initialData.budgetRemainingAmount
+              ).toLocaleString("id-ID")}
+              className="w-full mt-1 px-3 py-2 border rounded bg-gray-100"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
+      {/* ACTION */}
       <div className="flex justify-end gap-2 pt-4">
         <button
           type="button"
-          onClick={onCancel}   // ✅ FIX
+          onClick={onCancel}
           className="px-4 py-2 border rounded"
         >
           Cancel
         </button>
 
         <button
-          type="button"
-          onClick={handleSubmit}
+          type="submit"
           disabled={loading}
           className="px-4 py-2 bg-blue-600 text-white rounded"
         >
           {loading ? "Menyimpan..." : "Simpan"}
         </button>
       </div>
-    </div>
+    </form>
   );
 }

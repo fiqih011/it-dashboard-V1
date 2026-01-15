@@ -3,129 +3,88 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  LayoutDashboard,
+  Wallet,
+  ArrowLeftRight,
+  Database,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
-type MenuItem = {
-  label: string;
-  href: string;
-};
-
-type MenuGroup = {
-  key: string;
-  label: string;
-  items: MenuItem[];
-};
-
-const MENU: MenuGroup[] = [
-  {
-    key: "dashboard",
-    label: "Dashboard",
-    items: [
-      { label: "OPEX", href: "/dashboard/opex" },
-      // future:
-      // { label: "CAPEX", href: "/dashboard/capex" },
-    ],
-  },
-  {
-    key: "budget-plan",
-    label: "Tabel Budget Plan",
-    items: [
-      { label: "OPEX", href: "/budget-plan/opex" },
-      { label: "CAPEX", href: "/budget-plan/capex" },
-    ],
-  },
-  {
-    key: "transactions",
-    label: "Tabel Transaksi",
-    items: [
-      { label: "OPEX", href: "/transactions/opex" },
-      { label: "CAPEX", href: "/transactions/capex" },
-    ],
-  },
-  {
-    key: "input",
-    label: "Input",
-    items: [
-      { label: "Budget Plan OPEX", href: "/input/budget-plan/opex" },
-      { label: "Budget Plan CAPEX", href: "/input/budget-plan/capex" },
-      { label: "Transaction OPEX", href: "/input/transaction/opex" },
-      { label: "Transaction CAPEX", href: "/input/transaction/capex" },
-    ],
-  },
+const menus = [
+  { label: "Dashboard", href: "/dashboard/opex", icon: LayoutDashboard },
+  { label: "Budget Plan", href: "/budget-plan/opex", icon: Wallet },
+  { label: "Transaksi", href: "/transactions/opex", icon: ArrowLeftRight },
+  { label: "Input", href: "/input/budget-plan/opex", icon: Database },
 ];
-
-function isActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [collapsed, setCollapsed] = useState(false);
 
-  // 🔹 Auto-open group jika salah satu child aktif
+  // ✅ AUTO COLLAPSE UNTUK TABLET
   useEffect(() => {
-    const initialState: Record<string, boolean> = {};
+    const handleResize = () => {
+      if (window.innerWidth <= 1024) {
+        setCollapsed(true);
+      } else {
+        setCollapsed(false);
+      }
+    };
 
-    MENU.forEach((group) => {
-      initialState[group.key] = group.items.some((item) =>
-        isActive(pathname, item.href)
-      );
-    });
-
-    setOpenGroups((prev) => ({ ...prev, ...initialState }));
-  }, [pathname]);
-
-  function toggleGroup(key: string) {
-    setOpenGroups((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  }
+    handleResize(); // initial
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   return (
-    <aside className="w-64 shrink-0 border-r bg-white">
-      <div className="h-14 flex items-center px-4 font-bold border-b">
-        IT Budgeting
+    <aside
+      className={`
+        h-screen bg-white border-r border-gray-200
+        transition-all duration-200
+        ${collapsed ? "w-16" : "w-64"}
+      `}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+        {!collapsed && (
+          <span className="text-sm font-semibold text-gray-900">
+            IT Budgeting
+          </span>
+        )}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="text-gray-500 hover:text-gray-900"
+        >
+          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        </button>
       </div>
 
-      <nav className="p-3 space-y-3 text-sm">
-        {MENU.map((group) => {
-          const isOpen = openGroups[group.key];
+      {/* Menu */}
+      <nav className="px-2 py-4 space-y-1">
+        {menus.map((menu) => {
+          const active = pathname.startsWith(menu.href);
+          const Icon = menu.icon;
 
           return (
-            <div key={group.key}>
-              {/* Group Header */}
-              <button
-                type="button"
-                onClick={() => toggleGroup(group.key)}
-                className="flex w-full items-center justify-between rounded px-4 py-2 text-gray-800 hover:bg-gray-100"
-              >
-                <span>{group.label}</span>
-                <span className="text-xs">{isOpen ? "▾" : "▸"}</span>
-              </button>
-
-              {/* Group Items */}
-              {isOpen && (
-                <div className="mt-1 space-y-1 pl-2">
-                  {group.items.map((item) => {
-                    const active = isActive(pathname, item.href);
-
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={`block rounded px-4 py-2 transition ${
-                          active
-                            ? "bg-blue-600 text-white"
-                            : "text-gray-700 hover:bg-gray-100"
-                        }`}
-                      >
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <Link
+              key={menu.href}
+              href={menu.href}
+              className={`
+                flex items-center gap-3 px-3 py-2 rounded-md text-sm
+                transition
+                ${
+                  active
+                    ? "bg-slate-100 text-gray-900 font-medium"
+                    : "text-gray-600 hover:bg-slate-50 hover:text-gray-900"
+                }
+                ${collapsed ? "justify-center" : ""}
+              `}
+            >
+              <Icon size={18} />
+              {!collapsed && <span>{menu.label}</span>}
+            </Link>
           );
         })}
       </nav>

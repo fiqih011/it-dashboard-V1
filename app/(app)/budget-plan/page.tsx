@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { BudgetPlanOpex } from "@prisma/client";
 
 import BudgetPlanTable, {
   BudgetPlanRow,
@@ -13,52 +11,50 @@ import { BudgetPlanFilterValue } from "@/components/filter/types";
 import EditBudgetPlanModal from "@/components/modal/EditBudgetPlanModal";
 import TransactionDetailModal from "@/components/modal/TransactionDetailModal";
 
-export default function BudgetPlanOpexPage() {
-  const router = useRouter();
+/**
+ * =========================================
+ * API RAW TYPE (SOURCE OF TRUTH)
+ * =========================================
+ */
+type ApiBudgetPlanOpex = {
+  id: string;
+  displayId: string;
+  year: number;
+  coa: string;
+  category: string;
+  component: string;
+  budgetPlanAmount: string;
+  budgetRealisasiAmount: string;
+  budgetRemainingAmount: string;
+};
 
-  /**
-   * ===============================
-   * STATE — DATA
-   * ===============================
-   */
+export default function BudgetPlanOpexPage() {
   const [rows, setRows] = useState<BudgetPlanRow[]>([]);
   const [rawRows, setRawRows] =
-    useState<BudgetPlanOpex[]>([]);
+    useState<ApiBudgetPlanOpex[]>([]);
   const [total, setTotal] = useState(0);
 
-  /**
-   * ===============================
-   * STATE — PAGINATION
-   * ===============================
-   */
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  /**
-   * ===============================
-   * STATE — FILTER
-   * ===============================
-   */
   const [draftFilters, setDraftFilters] =
     useState<BudgetPlanFilterValue>({});
   const [appliedFilters, setAppliedFilters] =
     useState<BudgetPlanFilterValue>({});
 
-  /**
-   * ===============================
-   * STATE — MODAL
-   * ===============================
-   */
   const [editRaw, setEditRaw] =
-    useState<BudgetPlanOpex | null>(null);
+    useState<ApiBudgetPlanOpex | null>(null);
 
   const [detailRow, setDetailRow] =
     useState<BudgetPlanRow | null>(null);
 
+  const [transactionMode, setTransactionMode] =
+    useState<"view" | "input">("view");
+
   /**
-   * ===============================
+   * =========================================
    * FETCH DATA
-   * ===============================
+   * =========================================
    */
   async function fetchData() {
     const params = new URLSearchParams({
@@ -69,9 +65,6 @@ export default function BudgetPlanOpexPage() {
       }),
       ...(appliedFilters.displayId && {
         displayId: appliedFilters.displayId,
-      }),
-      ...(appliedFilters.coa && {          // ✅ DITAMBAHKAN
-      coa: appliedFilters.coa,
       }),
       ...(appliedFilters.category && {
         category: appliedFilters.category,
@@ -86,17 +79,20 @@ export default function BudgetPlanOpexPage() {
     );
     const json = await res.json();
 
-    const apiData: BudgetPlanOpex[] =
+    const apiData: ApiBudgetPlanOpex[] =
       json.data ?? [];
 
     /**
-     * MAP API → TABLE ROW
+     * =========================================
+     * MAP API → TABLE VIEW MODEL
+     * (COA DI-SINKRONKAN DI SINI)
+     * =========================================
      */
     const mapped: BudgetPlanRow[] = apiData.map(
       (item) => ({
         id: item.id,
         displayId: item.displayId,
-        coa: item.coa,
+        coa: item.coa, // ✅ INI KUNCI UTAMA
         category: item.category,
         component: item.component,
         totalBudget: Number(item.budgetPlanAmount),
@@ -120,7 +116,6 @@ export default function BudgetPlanOpexPage() {
 
   return (
     <div className="space-y-6">
-      {/* HEADER */}
       <h1 className="text-xl font-semibold text-gray-900">
         Tabel Budget Plan OPEX
       </h1>
@@ -150,11 +145,11 @@ export default function BudgetPlanOpexPage() {
           if (raw) setEditRaw(raw);
         }}
         onInput={(row) => {
-          router.push(
-            `/input/transaction/opex?budgetId=${row.id}`
-          );
+          setTransactionMode("input");
+          setDetailRow(row);
         }}
         onDetail={(row) => {
+          setTransactionMode("view");
           setDetailRow(row);
         }}
       />
@@ -181,11 +176,12 @@ export default function BudgetPlanOpexPage() {
         />
       )}
 
-      {/* DETAIL MODAL (TIDAK DIUBAH) */}
+      {/* TRANSACTION DETAIL / INPUT MODAL */}
       {detailRow && (
         <TransactionDetailModal
           open
           budgetId={detailRow.id}
+          mode={transactionMode}
           onClose={() => setDetailRow(null)}
         />
       )}
