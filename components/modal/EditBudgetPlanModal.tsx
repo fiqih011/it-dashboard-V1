@@ -2,6 +2,7 @@
 
 import BudgetPlanForm from "@/components/forms/BudgetPlanForm";
 import type { BudgetPlanOpex } from "@prisma/client";
+import { X } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -18,7 +19,7 @@ export default function EditBudgetPlanModal({
 }: Props) {
   if (!open) return null;
 
-  // 🔑 ADAPTER: Prisma bigint → Form number
+  // 🔑 ADAPTER: Prisma bigint → Form number (TIDAK DIUBAH)
   const formData = {
     id: data.id,
     displayId: data.displayId,
@@ -33,29 +34,37 @@ export default function EditBudgetPlanModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white w-full max-w-lg rounded shadow-lg">
-        {/* HEADER */}
-        <div className="flex items-center justify-between px-4 py-3 border-b">
-          <h2 className="font-semibold">Edit Budget Plan OPEX</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-500 hover:text-black"
-          >
-            ✕
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 flex flex-col">
+        {/* =====================================================
+            HEADER — DISERAGAMKAN (STYLE ONLY)
+        ===================================================== */}
+        <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-5 rounded-t-2xl border-b border-slate-600">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-white">
+              Edit Budget Plan OPEX
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-slate-300 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* BODY */}
-        <div className="p-4">
+        {/* =====================================================
+            BODY — TIDAK DIUBAH
+        ===================================================== */}
+        <div className="p-6">
           <BudgetPlanForm
             mode="edit"
             initialData={formData}
-            onCancel={onClose} // ✅ Cancel langsung nutup modal
+            onCancel={onClose} // ✅ Cancel → close modal
             onSuccess={() => {
               onSuccess();
-              onClose();       // ✅ Save → close
+              onClose();       // ✅ Save → close modal
             }}
           />
         </div>

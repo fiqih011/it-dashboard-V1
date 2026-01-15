@@ -21,6 +21,7 @@ type Transaction = {
 
 type BudgetInfo = {
   budgetId: string;
+  coa: string; // ✅ TAMBAHAN: COA
   component: string;
   totalBudget: number;
   used: number;
@@ -138,6 +139,11 @@ export default function TransactionDetailModal({
                   <p className="text-slate-200">
                     <span className="font-semibold">Budget ID:</span>{" "}
                     {budgetInfo.budgetId}
+                  </p>
+                  {/* ✅ TAMBAHAN: COA */}
+                  <p className="text-slate-200">
+                    <span className="font-semibold">COA:</span>{" "}
+                    <span className="font-mono">{budgetInfo.coa}</span>
                   </p>
                   <p className="text-slate-200">
                     <span className="font-semibold">Komponen:</span>{" "}

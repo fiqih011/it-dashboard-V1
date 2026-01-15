@@ -23,6 +23,7 @@ export async function GET(
       where: { id: budgetPlanId },
       select: {
         displayId: true,
+        coa: true, // ✅ TAMBAHAN: COA
         component: true,
         budgetPlanAmount: true,
         budgetRealisasiAmount: true,
@@ -67,6 +68,7 @@ export async function GET(
     return NextResponse.json({
       budgetInfo: {
         budgetId: budgetPlan.displayId,
+        coa: budgetPlan.coa, // ✅ TAMBAHAN: COA
         component: budgetPlan.component,
         totalBudget: Number(budgetPlan.budgetPlanAmount),
         used: Number(budgetPlan.budgetRealisasiAmount),

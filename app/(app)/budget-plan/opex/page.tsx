@@ -12,6 +12,8 @@ import BudgetPlanFilter from "@/components/filter/BudgetPlanFilter";
 import { BudgetPlanFilterValue } from "@/components/filter/types";
 import EditBudgetPlanModal from "@/components/modal/EditBudgetPlanModal";
 import TransactionDetailModal from "@/components/modal/TransactionDetailModal";
+import CreateBudgetPlanModal from "@/components/modal/CreateBudgetPlanModal";
+import Button from "@/components/ui/Button";
 
 export default function BudgetPlanOpexPage() {
   const router = useRouter();
@@ -51,9 +53,10 @@ export default function BudgetPlanOpexPage() {
    */
   const [editRaw, setEditRaw] =
     useState<BudgetPlanOpex | null>(null);
-
   const [detailRow, setDetailRow] =
     useState<BudgetPlanRow | null>(null);
+  const [openCreate, setOpenCreate] =
+    useState(false);
 
   /**
    * ===============================
@@ -70,8 +73,8 @@ export default function BudgetPlanOpexPage() {
       ...(appliedFilters.displayId && {
         displayId: appliedFilters.displayId,
       }),
-      ...(appliedFilters.coa && {          // ✅ DITAMBAHKAN
-      coa: appliedFilters.coa,
+      ...(appliedFilters.coa && {
+        coa: appliedFilters.coa,
       }),
       ...(appliedFilters.category && {
         category: appliedFilters.category,
@@ -89,9 +92,6 @@ export default function BudgetPlanOpexPage() {
     const apiData: BudgetPlanOpex[] =
       json.data ?? [];
 
-    /**
-     * MAP API → TABLE ROW
-     */
     const mapped: BudgetPlanRow[] = apiData.map(
       (item) => ({
         id: item.id,
@@ -120,10 +120,19 @@ export default function BudgetPlanOpexPage() {
 
   return (
     <div className="space-y-6">
-      {/* HEADER */}
-      <h1 className="text-xl font-semibold text-gray-900">
-        Tabel Budget Plan OPEX
-      </h1>
+      {/* HEADER + ACTION */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <h1 className="text-xl font-semibold text-gray-900">
+          Tabel Budget Plan OPEX
+        </h1>
+
+        <Button
+          variant="primary"
+          onClick={() => setOpenCreate(true)}
+        >
+          + Create Budget Plan
+        </Button>
+      </div>
 
       {/* FILTER */}
       <BudgetPlanFilter
@@ -168,6 +177,13 @@ export default function BudgetPlanOpexPage() {
         onPageSizeChange={setPageSize}
       />
 
+      {/* CREATE MODAL */}
+      <CreateBudgetPlanModal
+        open={openCreate}
+        onClose={() => setOpenCreate(false)}
+        onSuccess={fetchData}
+      />
+
       {/* EDIT MODAL */}
       {editRaw && (
         <EditBudgetPlanModal
@@ -181,7 +197,7 @@ export default function BudgetPlanOpexPage() {
         />
       )}
 
-      {/* DETAIL MODAL (TIDAK DIUBAH) */}
+      {/* DETAIL MODAL */}
       {detailRow && (
         <TransactionDetailModal
           open
