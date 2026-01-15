@@ -12,25 +12,9 @@ export default function ScrollableTable({
   minWidth,
 }: Props) {
   return (
-    <div
-      className="
-        w-full
-        overflow-x-auto
-        overflow-y-hidden
-      "
-    >
-      {/* 
-        Wrapper ini memastikan table:
-        - Full width secara visual
-        - Tetap bisa overflow jika minWidth > viewport
-      */}
-      <div className="w-full">
-        <div
-          className="inline-block align-top"
-          style={minWidth ? { minWidth } : undefined}
-        >
-          {children}
-        </div>
+    <div className="w-full overflow-x-auto overflow-y-hidden">
+      <div style={minWidth ? { minWidth } : { minWidth: '100%' }}>
+        {children}
       </div>
     </div>
   );
