@@ -1,12 +1,8 @@
-export type FilterFieldType = "text" | "select";
-
-export type FilterFieldConfig<T> = {
-  key: keyof T;
-  label: string;
-  type: FilterFieldType;
-  placeholder?: string;
-  options?: { label: string; value: string }[];
-};
+/**
+ * =========================================
+ * BASE FILTER TYPES
+ * =========================================
+ */
 
 export type BaseFilterProps<T> = {
   value: T;
@@ -15,27 +11,37 @@ export type BaseFilterProps<T> = {
   onReset: () => void;
 };
 
-/**
- * ============================
- * BUDGET PLAN FILTER VALUE
- * ============================
- */
-export type BudgetPlanFilterValue = {
-  year?: string;
-  displayId?: string;
-  coa?: string;
-  category?: string;
-  component?: string;
+export type FilterFieldType = "text" | "select";
+
+export type FilterOption = {
+  label: string;
+  value: string;
+};
+
+export type FilterFieldConfig<T> = {
+  key: keyof T;
+  label: string;
+  type: FilterFieldType;
+  placeholder?: string;
+  options?: FilterOption[];
 };
 
 /**
- * ============================
+ * =========================================
  * TRANSACTION FILTER VALUE
- * ============================
+ * =========================================
+ * NOTE:
+ * - Semua key di sini HARUS sinkron dengan:
+ *   - transaction.config.ts
+ *   - query param API
+ * - Optional (?) agar reset aman & tidak memaksa isi
  */
+
 export type TransactionFilterValue = {
+  year?: string;
+  transactionId?: string;
+  budgetId?: string;
   vendor?: string;
   requester?: string;
-  prNumber?: string;
-  poNumber?: string;
+  description?: string;
 };

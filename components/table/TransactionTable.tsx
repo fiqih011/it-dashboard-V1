@@ -25,7 +25,7 @@ export type TransactionRow = {
   prNumber?: string | null;
   poType?: string | null;
   poNumber?: string | null;
-  grNumber?: string | null;
+  grNumber?: string | null; // ⚠️ Tetap di type (untuk compatibility API), tapi tidak ditampilkan
 
   description: string;
   qty: number;
@@ -157,7 +157,7 @@ export default function TransactionTable({
   }
 
   return (
-    <ScrollableTable minWidth={2400}>
+    <ScrollableTable minWidth={2200}>
       <div className="w-full bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <table className="w-full border-collapse">
           <thead>
@@ -168,7 +168,7 @@ export default function TransactionTable({
               <Th label="Requester" column="requester" />
               <Th label="PR" column="prNumber" />
               <Th label="PO" column="poNumber" />
-              <Th label="GR" column="grNumber" />
+              {/* ❌ KOLOM GR DIHAPUS */}
               <Th label="Description" column="description" />
               <Th label="QTY" column="qty" align="right" />
               <Th label="Amount" column="amount" align="right" />
@@ -201,7 +201,7 @@ export default function TransactionTable({
                 <td className="px-4 py-3 border border-gray-200 whitespace-nowrap">{row.requester}</td>
                 <td className="px-4 py-3 border border-gray-200 whitespace-nowrap">{row.prNumber ?? "-"}</td>
                 <td className="px-4 py-3 border border-gray-200 whitespace-nowrap">{row.poNumber ?? "-"}</td>
-                <td className="px-4 py-3 border border-gray-200 whitespace-nowrap">{row.grNumber ?? "-"}</td>
+                {/* ❌ BARIS GR DIHAPUS */}
                 <td className="px-4 py-3 border border-gray-200 min-w-[250px]">{row.description}</td>
                 <td className="px-4 py-3 border border-gray-200 text-right whitespace-nowrap">{row.qty}</td>
                 <td className="px-4 py-3 border border-gray-200 text-right whitespace-nowrap">

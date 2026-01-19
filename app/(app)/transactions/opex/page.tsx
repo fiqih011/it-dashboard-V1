@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import TransactionFilter from "@/components/filter/TransactionFilter";
 import { TransactionFilterValue } from "@/components/filter/types";
@@ -10,15 +9,14 @@ import PaginationBar from "@/components/table/PaginationBar";
 import TransactionTable from "@/components/table/TransactionTable";
 import type { TransactionRow } from "@/components/table/TransactionTable";
 
+import EditTransactionModal from "@/components/modal/EditTransactionModal";
 import { showError, showSuccess } from "@/lib/swal";
 
 export default function TransactionsOpexPage() {
-  const router = useRouter();
-
   const [rows, setRows] = useState<TransactionRow[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 🔒 FILTER STATE — STRICT & GENERIC
+  // 🔒 FILTER STATE
   const [draftFilters, setDraftFilters] =
     useState<TransactionFilterValue>({});
   const [appliedFilters, setAppliedFilters] =
@@ -28,9 +26,14 @@ export default function TransactionsOpexPage() {
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
 
+  // 🔑 EDIT MODAL STATE
+  const [openEdit, setOpenEdit] = useState(false);
+  const [selectedId, setSelectedId] =
+    useState<string | null>(null);
+
   /**
    * =========================================
-   * FETCH DATA — GENERIC & TYPE SAFE
+   * FETCH DATA
    * =========================================
    */
   async function fetchData() {
@@ -42,7 +45,6 @@ export default function TransactionsOpexPage() {
         pageSize: String(pageSize),
       });
 
-      // ✅ GENERIC FILTER → QUERY (NO HARDCODE FIELD)
       Object.entries(appliedFilters).forEach(
         ([key, value]) => {
           if (
@@ -75,11 +77,6 @@ export default function TransactionsOpexPage() {
     }
   }
 
-  /**
-   * =========================================
-   * EFFECTS
-   * =========================================
-   */
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -87,7 +84,7 @@ export default function TransactionsOpexPage() {
 
   /**
    * =========================================
-   * ACTIONS
+   * DELETE
    * =========================================
    */
   async function handleDelete(
@@ -111,6 +108,16 @@ export default function TransactionsOpexPage() {
 
   /**
    * =========================================
+   * EDIT (OPEN MODAL)
+   * =========================================
+   */
+  function handleEdit(id: string) {
+    setSelectedId(id);
+    setOpenEdit(true);
+  }
+
+  /**
+   * =========================================
    * RENDER
    * =========================================
    */
@@ -121,13 +128,11 @@ export default function TransactionsOpexPage() {
   return (
     <div className="space-y-6 p-6">
       {/* HEADER */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">
-          Tabel Transaksi OPEX
-        </h1>
-      </div>
+      <h1 className="text-xl font-semibold text-gray-900">
+        Tabel Transaksi OPEX
+      </h1>
 
-      {/* FILTER — FINAL SYSTEM */}
+      {/* FILTER */}
       <TransactionFilter
         value={draftFilters}
         onChange={setDraftFilters}
@@ -145,9 +150,7 @@ export default function TransactionsOpexPage() {
       {/* TABLE */}
       <TransactionTable
         rows={rows}
-        onEdit={(id) =>
-          router.push(`/transactions/opex/edit/${id}`)
-        }
+        onEdit={handleEdit}
         onDelete={handleDelete}
       />
 
@@ -161,6 +164,17 @@ export default function TransactionsOpexPage() {
           setPageSize(n);
           setPage(1);
         }}
+      />
+
+      {/* 🔑 EDIT MODAL */}
+      <EditTransactionModal
+        open={openEdit}
+        transactionId={selectedId}
+        onClose={() => {
+          setOpenEdit(false);
+          setSelectedId(null);
+        }}
+        onSuccess={fetchData}
       />
     </div>
   );

@@ -93,8 +93,8 @@ export default function InputTransactionOpexPage() {
   }
 
   return (
-
-      <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-5xl mx-auto px-6 py-8">
         {/* 
           =====================================================
           WRAPPER CONTAINER - BACKGROUND PUTIH MENYATUKAN SEMUA
@@ -170,6 +170,6 @@ export default function InputTransactionOpexPage() {
           </div>
         </div>
       </div>
-
+    </div>
   );
 }

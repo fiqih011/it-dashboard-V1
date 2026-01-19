@@ -7,8 +7,8 @@ import Button from "@/components/ui/Button";
  * TYPE
  * =============================== */
 export type TransactionFormData = {
-  transactionId?: string; // hanya ada di EDIT
-  budgetId?: string;      // wajib ada, read-only
+  transactionId?: string; // ada hanya di EDIT
+  budgetId?: string;
 
   vendor: string;
   requester: string;
@@ -25,17 +25,25 @@ export type TransactionFormData = {
   approvedDate: string;
   deliveryDate: string;
 
-  opexCapex: "OPEX" | "CAPEX" | "";  // ✅ Field baru untuk OPEX/CAPEX
+  opexCapex: "OPEX" | "CAPEX" | "";
   cc: string;
-  coa: string;  // ✅ Field COA
-  oc: string;   // ✅ Field O/C
+
+  /**
+   * 🔒 PENTING
+   * COA TIDAK LAGI DIINPUT DARI FORM
+   * - COA berasal dari Budget (context)
+   * - Tetap ada di type agar kompatibel dengan API lama
+   */
+  coa: string;
+
+  oc: string; // 🔒 KONTRAK API: "O" | "C"
   status: "Approved" | "Pending" | "In Progres" | "";
   notes: string;
 };
 
 type Props = {
   initialData?: TransactionFormData;
-  remainingBudget?: string; // ✅ Format string dengan locale
+  remainingBudget?: string;
   onSubmit: (data: TransactionFormData) => Promise<void>;
   onCancel?: () => void;
 };
@@ -62,9 +70,9 @@ const emptyForm: TransactionFormData = {
   approvedDate: "",
   deliveryDate: "",
 
-  opexCapex: "OPEX",  // Default OPEX
+  opexCapex: "", // default kosong
   cc: "",
-  coa: "",
+  coa: "", // 🔒 tidak diisi dari UI
   oc: "",
   status: "",
   notes: "",
@@ -79,13 +87,28 @@ export default function TransactionForm({
   const [form, setForm] = useState<TransactionFormData>(emptyForm);
   const [loading, setLoading] = useState(false);
 
-  // mode edit jika ada transactionId
-  const isEditMode = Boolean(initialData?.transactionId);
-
+  /**
+   * =========================================
+   * INIT FORM
+   * - CREATE  → jangan auto isi OPEX/CAPEX
+   * - EDIT    → ikuti data lama
+   * =========================================
+   */
   useEffect(() => {
-    if (initialData) {
-      setForm({ ...emptyForm, ...initialData });
+    if (!initialData) {
+      setForm(emptyForm);
+      return;
     }
+
+    // CREATE MODE (tidak ada transactionId)
+    if (!initialData.transactionId) {
+      const { opexCapex, oc, ...rest } = initialData;
+      setForm({ ...emptyForm, ...rest });
+      return;
+    }
+
+    // EDIT MODE
+    setForm({ ...emptyForm, ...initialData });
   }, [initialData]);
 
   function handleChange(
@@ -100,63 +123,30 @@ export default function TransactionForm({
   async function handleSubmit() {
     setLoading(true);
     try {
-      await onSubmit(form);
+      // 🔑 MAP UI → KONTRAK API (O/C)
+      const payload: TransactionFormData = {
+        ...form,
+        oc:
+          form.opexCapex === "OPEX"
+            ? "OPEX"
+            : form.opexCapex === "CAPEX"
+            ? "CAPEX"
+            : "",
+      };
+
+      await onSubmit(payload);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="space-y-6">
-
-      {/* ===============================
-          READ-ONLY HEADER
-          =============================== */}
+    <div className="space-y-5">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Transaction ID: HANYA EDIT - Otomatis dibuat saat simpan */}
-        {isEditMode && (
-          <Input
-            label="Transaction ID"
-            value={form.transactionId ?? ""}
-            readOnly
-          />
-        )}
+        <Input label="Vendor" name="vendor" value={form.vendor} onChange={handleChange} required />
+        <Input label="Requester" name="requester" value={form.requester} onChange={handleChange} required />
+        <Input label="PR Number" name="prNumber" value={form.prNumber} onChange={handleChange} />
 
-        {/* Budget ID: SELALU ADA - Otomatis terisi */}
-        <Input
-          label="Budget ID"
-          value={form.budgetId ?? ""}
-          readOnly
-        />
-      </div>
-
-      {/* ===============================
-          MAIN FORM
-          =============================== */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input 
-          label="Vendor" 
-          name="vendor" 
-          value={form.vendor} 
-          onChange={handleChange}
-          required
-        />
-        <Input 
-          label="Requester" 
-          name="requester" 
-          value={form.requester} 
-          onChange={handleChange}
-          required
-        />
-
-        <Input 
-          label="PR Number" 
-          name="prNumber" 
-          value={form.prNumber} 
-          onChange={handleChange}
-        />
-
-        {/* PO / Non PO */}
         <Select
           label="PO / Non PO"
           name="poType"
@@ -168,74 +158,33 @@ export default function TransactionForm({
           ]}
         />
 
-        <Input 
-          label="PO Number" 
-          name="poNumber" 
-          value={form.poNumber} 
-          onChange={handleChange}
-        />
-        
-        <Input 
-          label="Document GR" 
-          name="documentGR" 
-          value={form.documentGR} 
-          onChange={handleChange}
-        />
+        <Input label="PO Number" name="poNumber" value={form.poNumber} onChange={handleChange} />
+        <Input label="QTY" name="qty" type="number" value={form.qty} onChange={handleChange} min="1" required />
 
-        <Input 
-          label="QTY" 
-          name="qty" 
-          type="number" 
-          value={form.qty} 
-          onChange={handleChange}
-          min="1"
-          required
-        />
-
-        {/* AMOUNT dengan info sisa budget */}
         <div>
-          {remainingBudget && (
-            <div className="text-xs text-orange-600 font-medium mb-1">
-              💰 Sisa Budget: Rp {remainingBudget}
-            </div>
-          )}
-          <Input
-            label="Amount"
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Amount
+            {remainingBudget && (
+              <span className="text-orange-600 ml-2">
+                💰 Sisa Budget: Rp {remainingBudget}
+              </span>
+            )}
+            <span className="text-red-500 ml-1">*</span>
+          </label>
+          <input
             name="amount"
             type="number"
             value={form.amount}
             onChange={handleChange}
-            placeholder="Masukkan jumlah"
             required
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
-        {/* Tanggal - boleh kosong */}
-        <Input 
-          label="Submission Date" 
-          name="submissionDate" 
-          type="date" 
-          value={form.submissionDate} 
-          onChange={handleChange}
-        />
-        
-        <Input 
-          label="Approved Date" 
-          name="approvedDate" 
-          type="date" 
-          value={form.approvedDate} 
-          onChange={handleChange}
-        />
-        
-        <Input 
-          label="Delivery Date" 
-          name="deliveryDate" 
-          type="date" 
-          value={form.deliveryDate} 
-          onChange={handleChange}
-        />
+        <Input label="Submission Date" name="submissionDate" type="date" value={form.submissionDate} onChange={handleChange} />
+        <Input label="Approved Date" name="approvedDate" type="date" value={form.approvedDate} onChange={handleChange} />
+        <Input label="Delivery Date" name="deliveryDate" type="date" value={form.deliveryDate} onChange={handleChange} />
 
-        {/* OPEX / CAPEX */}
         <Select
           label="OPEX / CAPEX"
           name="opexCapex"
@@ -248,32 +197,8 @@ export default function TransactionForm({
           required
         />
 
-        <Input 
-          label="CC / LOB" 
-          name="cc" 
-          value={form.cc} 
-          onChange={handleChange}
-        />
+        <Input label="CC / LOB" name="cc" value={form.cc} onChange={handleChange} />
 
-        {/* COA - Field baru */}
-        <Input 
-          label="COA" 
-          name="coa" 
-          value={form.coa} 
-          onChange={handleChange}
-          placeholder="Contoh: 001"
-          required
-        />
-
-        {/* O/C - Field baru */}
-        <Input 
-          label="O / C" 
-          name="oc" 
-          value={form.oc} 
-          onChange={handleChange}
-        />
-
-        {/* STATUS */}
         <Select
           label="Status"
           name="status"
@@ -288,31 +213,10 @@ export default function TransactionForm({
         />
       </div>
 
-      {/* ===============================
-          TEXTAREA SECTION
-          =============================== */}
-      <Textarea 
-        label="Description" 
-        name="description" 
-        value={form.description} 
-        onChange={handleChange}
-        rows={3}
-        required
-      />
-      
-      <Textarea 
-        label="Notes" 
-        name="notes" 
-        value={form.notes} 
-        onChange={handleChange} 
-        rows={2}
-        placeholder="Catatan tambahan (opsional)"
-      />
+      <Textarea label="Description" name="description" value={form.description} onChange={handleChange} required />
+      <Textarea label="Notes" name="notes" value={form.notes} onChange={handleChange} />
 
-      {/* ===============================
-          ACTION BUTTONS
-          =============================== */}
-      <div className="flex justify-end gap-3 pt-4 border-t">
+      <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
         <Button variant="secondary" onClick={onCancel} disabled={loading}>
           Cancel
         </Button>
@@ -337,9 +241,9 @@ function Input(
         {label}
         {props.required && <span className="text-red-500 ml-1">*</span>}
       </label>
-      <input 
-        {...rest} 
-        className={`w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${className || ''}`}
+      <input
+        {...rest}
+        className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 ${className || ""}`}
       />
     </div>
   );
@@ -355,9 +259,9 @@ function Textarea(
         {label}
         {props.required && <span className="text-red-500 ml-1">*</span>}
       </label>
-      <textarea 
-        {...rest} 
-        className={`w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${className || ''}`}
+      <textarea
+        {...rest}
+        className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 ${className || ""}`}
       />
     </div>
   );
@@ -379,9 +283,9 @@ function Select({
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
-      <select 
-        {...props} 
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      <select
+        {...props}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
       >
         <option value="">-- Pilih {label} --</option>
         {options.map((opt) => (

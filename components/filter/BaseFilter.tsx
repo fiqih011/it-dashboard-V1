@@ -35,7 +35,7 @@ export default function BaseFilter<
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6">
+    <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
       {/* FILTER FIELDS */}
       <div
         className="
@@ -43,7 +43,7 @@ export default function BaseFilter<
           grid-cols-1
           sm:grid-cols-2
           lg:grid-cols-3
-          xl:grid-cols-4
+          xl:grid-cols-6
           gap-4
         "
       >
@@ -123,30 +123,19 @@ export default function BaseFilter<
       </div>
 
       {/* ACTIONS */}
-      <div
-        className="
-          mt-6
-          flex
-          flex-col
-          sm:flex-row
-          sm:justify-end
-          gap-2
-        "
-      >
-        <Button
-          variant="secondary"
-          onClick={onReset}
-          className="w-full sm:w-auto"
-        >
-          Reset
-        </Button>
-
+      <div className="flex gap-2">
         <Button
           variant="primary"
           onClick={onSearch}
-          className="w-full sm:w-auto"
         >
           Search
+        </Button>
+
+        <Button
+          variant="secondary"
+          onClick={onReset}
+        >
+          Reset
         </Button>
       </div>
     </div>

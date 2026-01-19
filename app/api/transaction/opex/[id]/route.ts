@@ -20,7 +20,9 @@ export async function GET(
       include: {
         budgetPlan: {
           select: {
+            id: true, // ✅ TAMBAHAN: UUID budget plan
             displayId: true,
+            coa: true, // ✅ TAMBAHAN: COA dari budget
           },
         },
       },
@@ -36,6 +38,10 @@ export async function GET(
     return NextResponse.json({
       id: trx.id,
       displayId: trx.displayId,
+      
+      // ✅ TAMBAHAN: budgetPlanOpexId (UUID untuk fetch budget)
+      budgetPlanOpexId: trx.budgetPlanOpexId,
+      
       budgetPlanDisplayId: trx.budgetPlan.displayId,
 
       vendor: trx.vendor,
@@ -58,6 +64,13 @@ export async function GET(
       coa: trx.coa,
       status: trx.status,
       notes: trx.notes,
+      
+      // ✅ BONUS: Info budget plan langsung (opsional, untuk efisiensi)
+      budgetPlan: {
+        id: trx.budgetPlan.id,
+        displayId: trx.budgetPlan.displayId,
+        coa: trx.budgetPlan.coa,
+      },
     });
   } catch (err) {
     console.error("[GET TRANSACTION OPEX ERROR]", err);

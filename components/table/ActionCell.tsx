@@ -29,18 +29,6 @@ export default function ActionCell({
         </button>
       )}
 
-      {/* INPUT / REALISASI */}
-      {onInput && (
-        <button
-          type="button"
-          onClick={onInput}
-          title="Input Realisasi"
-          className="flex h-9 w-9 items-center justify-center rounded-md border border-blue-300 text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition"
-        >
-          <PlusCircle className="h-4 w-4" />
-        </button>
-      )}
-
       {/* EDIT */}
       {onEdit && (
         <button
@@ -53,7 +41,19 @@ export default function ActionCell({
         </button>
       )}
 
-      {/* DELETE (opsional, kalau dipakai nanti) */}
+      {/* INPUT / REALISASI */}
+      {onInput && (
+        <button
+          type="button"
+          onClick={onInput}
+          title="Input Realisasi"
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-blue-300 text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition"
+        >
+          <PlusCircle className="h-4 w-4" />
+        </button>
+      )}
+
+      {/* DELETE (opsional) */}
       {onDelete && (
         <button
           type="button"
