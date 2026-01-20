@@ -13,27 +13,34 @@ import {
 } from "lucide-react";
 
 const menus = [
-  { label: "Dashboard", href: "/dashboard/opex", icon: LayoutDashboard },
-  { label: "Budget Plan", href: "/budget-plan/opex", icon: Wallet },
-  { label: "Transaksi", href: "/transactions/opex", icon: ArrowLeftRight },
-  { label: "Input", href: "/input/budget-plan/opex", icon: Database },
+  {
+    label: "Dashboard",
+    href: "/dashboard/opex",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "Budget Plan",
+    href: "/budget-plan",
+    icon: Wallet,
+  },
+  {
+    label: "Transaksi",
+    href: "/transactions",
+    icon: ArrowLeftRight,
+  },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
-  // ✅ AUTO COLLAPSE UNTUK TABLET
+  // Auto collapse untuk tablet
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth <= 1024) {
-        setCollapsed(true);
-      } else {
-        setCollapsed(false);
-      }
+      setCollapsed(window.innerWidth <= 1024);
     };
 
-    handleResize(); // initial
+    handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -72,8 +79,7 @@ export default function Sidebar() {
               key={menu.href}
               href={menu.href}
               className={`
-                flex items-center gap-3 px-3 py-2 rounded-md text-sm
-                transition
+                flex items-center gap-3 px-3 py-2 rounded-md text-sm transition
                 ${
                   active
                     ? "bg-slate-100 text-gray-900 font-medium"

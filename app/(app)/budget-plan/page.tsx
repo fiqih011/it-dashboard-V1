@@ -1,210 +1,94 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BudgetPlanOpex } from "@prisma/client";
+import { FileText, Briefcase } from "lucide-react";
 
-import BudgetPlanTable, {
-  BudgetPlanRow,
-} from "@/components/table/BudgetPlanTable";
-import PaginationBar from "@/components/table/PaginationBar";
-import BudgetPlanFilter from "@/components/filter/BudgetPlanFilter";
-import { BudgetPlanFilterValue } from "@/components/filter/types";
-import EditBudgetPlanModal from "@/components/modal/EditBudgetPlanModal";
-import TransactionDetailModal from "@/components/modal/TransactionDetailModal";
-import CreateBudgetPlanModal from "@/components/modal/CreateBudgetPlanModal";
-import Button from "@/components/ui/Button";
-
-export default function BudgetPlanOpexPage() {
+export default function BudgetPlanLandingPage() {
   const router = useRouter();
-
-  /**
-   * ===============================
-   * STATE â€” DATA
-   * ===============================
-   */
-  const [rows, setRows] = useState<BudgetPlanRow[]>([]);
-  const [rawRows, setRawRows] =
-    useState<BudgetPlanOpex[]>([]);
-  const [total, setTotal] = useState(0);
-
-  /**
-   * ===============================
-   * STATE â€” PAGINATION
-   * ===============================
-   */
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  /**
-   * ===============================
-   * STATE â€” FILTER
-   * ===============================
-   */
-  const [draftFilters, setDraftFilters] =
-    useState<BudgetPlanFilterValue>({});
-  const [appliedFilters, setAppliedFilters] =
-    useState<BudgetPlanFilterValue>({});
-
-  /**
-   * ===============================
-   * STATE â€” MODAL
-   * ===============================
-   */
-  const [editRaw, setEditRaw] =
-    useState<BudgetPlanOpex | null>(null);
-  const [detailRow, setDetailRow] =
-    useState<BudgetPlanRow | null>(null);
-  const [openCreate, setOpenCreate] =
-    useState(false);
-
-  /**
-   * ===============================
-   * FETCH DATA
-   * ===============================
-   */
-  async function fetchData() {
-    const params = new URLSearchParams({
-      page: String(page),
-      pageSize: String(pageSize),
-      ...(appliedFilters.year && {
-        year: appliedFilters.year,
-      }),
-      ...(appliedFilters.displayId && {
-        displayId: appliedFilters.displayId,
-      }),
-      ...(appliedFilters.coa && {
-        coa: appliedFilters.coa,
-      }),
-      ...(appliedFilters.category && {
-        category: appliedFilters.category,
-      }),
-      ...(appliedFilters.component && {
-        component: appliedFilters.component,
-      }),
-    });
-
-    const res = await fetch(
-      `/api/budget/opex?${params.toString()}`
-    );
-    const json = await res.json();
-
-    const apiData: BudgetPlanOpex[] =
-      json.data ?? [];
-
-    const mapped: BudgetPlanRow[] = apiData.map(
-      (item) => ({
-        id: item.id,
-        displayId: item.displayId,
-        coa: item.coa,
-        category: item.category,
-        component: item.component,
-        totalBudget: Number(item.budgetPlanAmount),
-        totalRealisasi: Number(
-          item.budgetRealisasiAmount
-        ),
-        remaining: Number(
-          item.budgetRemainingAmount
-        ),
-      })
-    );
-
-    setRawRows(apiData);
-    setRows(mapped);
-    setTotal(json.total ?? 0);
-  }
-
-  useEffect(() => {
-    fetchData();
-  }, [page, pageSize, appliedFilters]);
 
   return (
     <div className="space-y-6">
-      {/* HEADER + ACTION */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">
-          Tabel Budget Plan OPEX
+      {/* ================= HEADER ================= */}
+      <div className="pb-4 border-b border-gray-200">
+        <h1 className="text-2xl font-semibold text-gray-900">
+          Budget Plan
         </h1>
-
-        <Button
-          variant="primary"
-          onClick={() => setOpenCreate(true)}
-        >
-          + Create Budget Plan
-        </Button>
+        <p className="mt-1 text-sm text-gray-500">
+          Pilih jenis budget yang ingin dikelola
+        </p>
       </div>
 
-      {/* FILTER */}
-      <BudgetPlanFilter
-        value={draftFilters}
-        onChange={setDraftFilters}
-        onSearch={() => {
-          setPage(1);
-          setAppliedFilters(draftFilters);
-        }}
-        onReset={() => {
-          setDraftFilters({});
-          setAppliedFilters({});
-          setPage(1);
-        }}
-      />
+      {/* ================= CARD GRID ================= */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        {/* ================= OPEX CARD ================= */}
+        <div className="relative flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md">
+          {/* Accent bar */}
+          <div className="absolute inset-x-0 top-0 h-1 rounded-t-xl bg-blue-600" />
 
-      {/* TABLE */}
-      <BudgetPlanTable
-        data={rows}
-        onEdit={(row) => {
-          const raw = rawRows.find(
-            (r) => r.id === row.id
-          );
-          if (raw) setEditRaw(raw);
-        }}
-        onInput={(row) => {
-          router.push(
-            `/input/transaction/opex?budgetId=${row.id}`
-          );
-        }}
-        onDetail={(row) => {
-          setDetailRow(row);
-        }}
-      />
+          <div>
+            <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <FileText className="h-5 w-5" />
+            </div>
 
-      {/* PAGINATION */}
-      <PaginationBar
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-      />
+            <h2 className="text-lg font-semibold text-gray-900">
+              OPEX
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Operational Expenditure
+            </p>
 
-      {/* CREATE MODAL */}
-      <CreateBudgetPlanModal
-        open={openCreate}
-        onClose={() => setOpenCreate(false)}
-        onSuccess={fetchData}
-      />
+            <p className="mt-4 text-sm text-gray-600">
+              Budget operasional tahunan untuk kebutuhan rutin
+              perusahaan seperti layanan, langganan, dan operasional
+              harian.
+            </p>
+          </div>
 
-      {/* EDIT MODAL */}
-      {editRaw && (
-        <EditBudgetPlanModal
-          open
-          data={editRaw}
-          onClose={() => setEditRaw(null)}
-          onSuccess={() => {
-            setEditRaw(null);
-            fetchData();
-          }}
-        />
-      )}
+          <div className="mt-6">
+            <button
+              onClick={() => router.push("/budget-plan/opex")}
+              className="inline-flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-100"
+            >
+              View Budget Plan
+              <span aria-hidden>→</span>
+            </button>
+          </div>
+        </div>
 
-      {/* DETAIL MODAL */}
-      {detailRow && (
-        <TransactionDetailModal
-          open
-          budgetId={detailRow.id}
-          onClose={() => setDetailRow(null)}
-        />
-      )}
+        {/* ================= CAPEX CARD ================= */}
+        <div className="relative flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md">
+          {/* Accent bar */}
+          <div className="absolute inset-x-0 top-0 h-1 rounded-t-xl bg-violet-600" />
+
+          <div>
+            <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+              <Briefcase className="h-5 w-5" />
+            </div>
+
+            <h2 className="text-lg font-semibold text-gray-900">
+              CAPEX
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Capital Expenditure
+            </p>
+
+            <p className="mt-4 text-sm text-gray-600">
+              Budget investasi aset dan pengeluaran jangka panjang
+              seperti perangkat, infrastruktur, dan proyek strategis.
+            </p>
+          </div>
+
+          <div className="mt-6">
+            <button
+              onClick={() => router.push("/budget-plan/capex")}
+              className="inline-flex items-center gap-2 rounded-md border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 transition hover:bg-violet-100"
+            >
+              View Budget Plan
+              <span aria-hidden>→</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

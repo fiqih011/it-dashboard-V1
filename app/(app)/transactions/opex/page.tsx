@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import TransactionFilter from "@/components/filter/TransactionFilter";
 import { TransactionFilterValue } from "@/components/filter/types";
@@ -13,6 +14,8 @@ import EditTransactionModal from "@/components/modal/EditTransactionModal";
 import { showError, showSuccess } from "@/lib/swal";
 
 export default function TransactionsOpexPage() {
+  const router = useRouter(); // ✅ ONLY ADDITION
+
   const [rows, setRows] = useState<TransactionRow[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -127,10 +130,19 @@ export default function TransactionsOpexPage() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* HEADER */}
-      <h1 className="text-xl font-semibold text-gray-900">
-        Tabel Transaksi OPEX
-      </h1>
+      {/* HEADER + BACK */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.push("/transactions")}
+          className="inline-flex items-center gap-2 rounded-md bg-slate-300 px-3 py-2 text-sm text-slate-800 hover:bg-slate-400 transition"
+        >
+          ← Back
+        </button>
+
+        <h1 className="text-xl font-semibold text-gray-900">
+          Tabel Transaksi OPEX
+        </h1>
+      </div>
 
       {/* FILTER */}
       <TransactionFilter
