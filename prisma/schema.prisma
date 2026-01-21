@@ -78,11 +78,19 @@ model TransactionOpex {
 // ==========================
 model BudgetPlanCapex {
   id                    String   @id @default(uuid())
-  displayId             String   @unique @map("display_id")
+
+  // Human readable Budget ID
+  // Format: CA-YY-XXXX
+  budgetDisplayId       String   @unique @map("budget_display_id")
+
   year                  Int
 
   itemCode              String   @map("item_code")
   itemDescription       String   @map("item_description")
+
+  // SINGLE SOURCE OF TRUTH — No CAPEX
+  noCapex               String?  @map("no_capex")
+
   itemRemark            String?  @map("item_remark")
 
   budgetPlanAmount      BigInt   @map("budget_plan_amount")
@@ -102,36 +110,40 @@ model BudgetPlanCapex {
 // TRANSACTION — CAPEX
 // ==========================
 model TransactionCapex {
-  id                String   @id @default(uuid())
-  budgetPlanCapexId String   @map("budget_plan_capex_id")
+  id                     String   @id @default(uuid())
 
-  vendor            String
-  requester         String
-  noCapex           String?  @map("no_capex")
-  projectCode       String?  @map("project_code")
-  noUi              String?  @map("no_ui")
-  prNumber          String?  @map("pr_number")
-  poType            String?  @map("po_type")
-  poNumber          String?  @map("po_number")
-  documentGr        String?  @map("document_gr")
-  description       String
-  assetNumber       String?  @map("asset_number")
-  qty               Int
-  amount            BigInt
+  // Human readable Transaction ID
+  // Format: TRX-CA-YY-XXXX
+  transactionDisplayId   String   @unique @map("transaction_display_id")
 
-  submissionDate    DateTime? @map("submission_date")
-  approvedDate      DateTime? @map("approved_date")
-  deliveryDate      DateTime? @map("delivery_date")
+  budgetPlanCapexId      String   @map("budget_plan_capex_id")
 
-  oc                String?  @map("o_c")
-  ccLob             String?  @map("cc_lob")
-  status            String
-  notes             String?
+  vendor                 String
+  requester              String
+  projectCode            String?  @map("project_code")
+  noUi                   String?  @map("no_ui")
+  prNumber               String?  @map("pr_number")
+  poType                 String?  @map("po_type")
+  poNumber               String?  @map("po_number")
+  documentGr             String?  @map("document_gr")
+  description            String
+  assetNumber            String?  @map("asset_number")
+  qty                    Int
+  amount                 BigInt
 
-  budgetPlan        BudgetPlanCapex @relation(fields: [budgetPlanCapexId], references: [id])
+  submissionDate         DateTime? @map("submission_date")
+  approvedDate           DateTime? @map("approved_date")
+  deliveryDate           DateTime? @map("delivery_date")
 
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  oc                     String?  @map("o_c")
+  ccLob                  String?  @map("cc_lob")
+  status                 String
+  notes                  String?
+
+  budgetPlan             BudgetPlanCapex @relation(fields: [budgetPlanCapexId], references: [id])
+
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
 
   @@map("transaction_capex")
 }

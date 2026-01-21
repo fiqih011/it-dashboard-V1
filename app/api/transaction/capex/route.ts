@@ -1,72 +1,59 @@
-// app/api/transaction/capex/route.ts
-import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 /**
- * GET /api/transaction/capex
- * List transaksi CAPEX (read-only)
+ * =====================================================
+ * HELPER — SERIALIZE BIGINT
+ * =====================================================
  */
-export async function GET() {
+function serialize<T>(data: T): T {
+  return JSON.parse(
+    JSON.stringify(data, (_, value) =>
+      typeof value === "bigint" ? value.toString() : value
+    )
+  );
+}
+
+/**
+ * =====================================================
+ * GET — LIST TRANSACTION CAPEX
+ * =====================================================
+ * /api/transaction/capex?budgetPlanCapexId=xxx
+ */
+export async function GET(req: NextRequest) {
   try {
-    const rows = await prisma.transactionCapex.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        budgetPlan: {
-          select: {
-            displayId: true,
-            itemCode: true,
-            itemDescription: true,
-          },
-        },
-      },
+    const { searchParams } = new URL(req.url);
+
+    const budgetPlanCapexId = searchParams.get("budgetPlanCapexId");
+
+    if (!budgetPlanCapexId) {
+      return NextResponse.json(
+        { error: "budgetPlanCapexId wajib diisi" },
+        { status: 400 }
+      );
+    }
+
+    const data = await prisma.transactionCapex.findMany({
+      where: { budgetPlanCapexId },
+      orderBy: { createdAt: "asc" },
     });
 
-    const data = rows.map((r) => ({
-      id: r.id,
-      budgetPlanCapexId: r.budgetPlanCapexId,
-      budgetPlanDisplayId: r.budgetPlan.displayId,
-      itemCode: r.budgetPlan.itemCode,
-      itemDescription: r.budgetPlan.itemDescription,
-      vendor: r.vendor,
-      requester: r.requester,
-      noCapex: r.noCapex,
-      projectCode: r.projectCode,
-      noUi: r.noUi,
-      prNumber: r.prNumber,
-      poType: r.poType,
-      poNumber: r.poNumber,
-      documentGr: r.documentGr,
-      description: r.description,
-      assetNumber: r.assetNumber,
-      qty: r.qty,
-      amount: r.amount.toString(),
-      submissionDate: r.submissionDate,
-      approvedDate: r.approvedDate,
-      deliveryDate: r.deliveryDate,
-      oc: r.oc,
-      ccLob: r.ccLob,
-      status: r.status,
-      notes: r.notes,
-      createdAt: r.createdAt,
-    }));
-
-    return NextResponse.json({ data }, { status: 200 });
+    return NextResponse.json(serialize(data));
   } catch (error) {
     console.error("GET TRANSACTION CAPEX ERROR:", error);
     return NextResponse.json(
-      { error: "Gagal mengambil data Transaksi CAPEX." },
+      { error: "Gagal mengambil transaksi CAPEX" },
       { status: 500 }
     );
   }
 }
 
 /**
- * POST /api/transaction/capex
- * Create transaksi CAPEX + update budget plan
+ * =====================================================
+ * POST — CREATE TRANSACTION CAPEX
+ * =====================================================
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
@@ -74,47 +61,23 @@ export async function POST(req: Request) {
       budgetPlanCapexId,
       vendor,
       requester,
-      noCapex,
-      projectCode,
-      noUi,
-      prNumber,
-      poType,
-      poNumber,
-      documentGr,
       description,
-      assetNumber,
       qty,
       amount,
-      submissionDate,
-      approvedDate,
-      deliveryDate,
-      oc,
-      ccLob,
       status,
-      notes,
-    } = body as any;
+    } = body;
 
     if (
       !budgetPlanCapexId ||
       !vendor ||
       !requester ||
       !description ||
-      !assetNumber ||
-      !qty ||
-      qty <= 0 ||
+      qty === undefined ||
       amount === undefined ||
-      amount === null
+      !status
     ) {
       return NextResponse.json(
-        { error: "Field wajib belum lengkap / tidak valid." },
-        { status: 400 }
-      );
-    }
-
-    const trxAmount = BigInt(amount);
-    if (trxAmount <= 0n) {
-      return NextResponse.json(
-        { error: "Amount harus lebih dari 0." },
+        { error: "Field wajib belum lengkap" },
         { status: 400 }
       );
     }
@@ -125,70 +88,88 @@ export async function POST(req: Request) {
 
     if (!plan) {
       return NextResponse.json(
-        { error: "Budget Plan CAPEX tidak ditemukan." },
+        { error: "Budget Plan CAPEX tidak ditemukan" },
         { status: 404 }
       );
     }
 
-    if (plan.budgetRemainingAmount < trxAmount) {
+    const trxAmount = BigInt(amount);
+
+    if (trxAmount > plan.budgetRemainingAmount) {
       return NextResponse.json(
-        { error: "Budget remaining tidak mencukupi." },
+        { error: "Budget CAPEX tidak mencukupi" },
         { status: 400 }
       );
     }
 
-    const created = await prisma.$transaction(async (tx) => {
-      const trx = await tx.transactionCapex.create({
+    /**
+     * =================================================
+     * GENERATE TRANSACTION DISPLAY ID
+     * Format: TRX-CA-YY-XXXX
+     * =================================================
+     */
+    const yearShort = String(plan.year).slice(-2);
+
+    const last = await prisma.transactionCapex.findFirst({
+      where: {
+        transactionDisplayId: { startsWith: `TRX-CA-${yearShort}` },
+      },
+      orderBy: { transactionDisplayId: "desc" },
+      select: { transactionDisplayId: true },
+    });
+
+    const next = last
+      ? Number(last.transactionDisplayId.slice(-4)) + 1
+      : 1;
+
+    const transactionDisplayId = `TRX-CA-${yearShort}-${String(next).padStart(
+      4,
+      "0"
+    )}`;
+
+    /**
+     * =================================================
+     * TRANSACTION DB (ATOMIC)
+     * =================================================
+     */
+    const result = await prisma.$transaction(async (tx) => {
+      const created = await tx.transactionCapex.create({
         data: {
+          transactionDisplayId,
           budgetPlanCapexId,
           vendor,
           requester,
-          noCapex,
-          projectCode,
-          noUi,
-          prNumber,
-          poType,
-          poNumber,
-          documentGr,
           description,
-          assetNumber,
           qty,
           amount: trxAmount,
-          submissionDate: submissionDate ? new Date(submissionDate) : null,
-          approvedDate: approvedDate ? new Date(approvedDate) : null,
-          deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
-          oc,
-          ccLob,
-          status: status ?? "OPEN",
-          notes,
+          status,
         },
       });
 
       await tx.budgetPlanCapex.update({
         where: { id: budgetPlanCapexId },
         data: {
-          budgetRealisasiAmount: plan.budgetRealisasiAmount + trxAmount,
-          budgetRemainingAmount: plan.budgetRemainingAmount - trxAmount,
+          budgetRealisasiAmount:
+            plan.budgetRealisasiAmount + trxAmount,
+          budgetRemainingAmount:
+            plan.budgetRemainingAmount - trxAmount,
         },
       });
 
-      return trx;
+      return created;
     });
 
     return NextResponse.json(
-      {
-        message: "Transaksi CAPEX berhasil dicatat.",
-        data: {
-          transactionId: created.id,
-          budgetPlanCapexId,
-        },
-      },
-      { status: 201 }
+      serialize({
+        success: true,
+        id: result.id,
+        transactionDisplayId: result.transactionDisplayId,
+      })
     );
   } catch (error) {
     console.error("POST TRANSACTION CAPEX ERROR:", error);
     return NextResponse.json(
-      { error: "Gagal mencatat transaksi CAPEX." },
+      { error: "Gagal menyimpan transaksi CAPEX" },
       { status: 500 }
     );
   }
