@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
   const [data, total] = await Promise.all([
     prisma.budgetPlanOpex.findMany({
       where,
-      orderBy: { displayId: "asc" },
+      orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),

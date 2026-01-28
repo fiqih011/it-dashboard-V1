@@ -1,175 +1,265 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
-/**
- * =====================================================
- * HELPER — SERIALIZE BIGINT
- * =====================================================
- */
-function serialize<T>(data: T): T {
-  return JSON.parse(
-    JSON.stringify(data, (_, value) =>
-      typeof value === "bigint" ? value.toString() : value
-    )
-  );
-}
-
-/**
- * =====================================================
- * GET — LIST TRANSACTION CAPEX
- * =====================================================
- * /api/transaction/capex?budgetPlanCapexId=xxx
- */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
 
-    const budgetPlanCapexId = searchParams.get("budgetPlanCapexId");
+    // =========================
+    // PAGINATION
+    // =========================
+    const page = Math.max(Number(searchParams.get("page")) || 1, 1);
+    const pageSize = Math.max(
+      Number(searchParams.get("pageSize")) || 10,
+      1
+    );
 
-    if (!budgetPlanCapexId) {
-      return NextResponse.json(
-        { error: "budgetPlanCapexId wajib diisi" },
-        { status: 400 }
-      );
-    }
+    const skip = (page - 1) * pageSize;
+    const take = pageSize;
 
-    const data = await prisma.transactionCapex.findMany({
-      where: { budgetPlanCapexId },
-      orderBy: { createdAt: "asc" },
+    // =========================
+    // FILTER PARAMS
+    // =========================
+    const year = searchParams.get("year") ?? undefined;
+    const transactionId = searchParams.get("transactionId") ?? undefined;
+    const budgetId = searchParams.get("budgetId") ?? undefined;
+    const vendor = searchParams.get("vendor") ?? undefined;
+    const requester = searchParams.get("requester") ?? undefined;
+    const description = searchParams.get("description") ?? undefined;
+
+    // =========================
+    // WHERE (TYPE SAFE)
+    // =========================
+    const where: Prisma.TransactionCapexWhereInput = {
+      ...(year && {
+        submissionDate: {
+          gte: new Date(`${year}-01-01`),
+          lte: new Date(`${year}-12-31`),
+        },
+      }),
+      ...(transactionId && {
+        transactionDisplayId: {
+          contains: transactionId,
+        },
+      }),
+      ...(budgetId && {
+        budgetPlan: {
+          budgetDisplayId: {
+            contains: budgetId,
+          },
+        },
+      }),
+      ...(vendor && {
+        vendor: {
+          contains: vendor,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      }),
+      ...(requester && {
+        requester: {
+          contains: requester,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      }),
+      ...(description && {
+        description: {
+          contains: description,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      }),
+    };
+
+    // =========================
+    // TOTAL COUNT
+    // =========================
+    const total = await prisma.transactionCapex.count({
+      where,
     });
 
-    return NextResponse.json(serialize(data));
-  } catch (error) {
-    console.error("GET TRANSACTION CAPEX ERROR:", error);
+    // =========================
+    // DATA (PAGINATION)
+    // =========================
+    const data = await prisma.transactionCapex.findMany({
+      where,
+      skip,
+      take,
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        budgetPlan: {
+          select: {
+            budgetDisplayId: true,
+          },
+        },
+      },
+    });
+
+    // =========================
+    // RESPONSE (BIGINT SAFE)
+    // =========================
+    return NextResponse.json({
+      data: data.map((trx) => ({
+        id: trx.id,
+        transactionDisplayId: trx.transactionDisplayId,
+        budgetPlanCapexId: trx.budgetPlan.budgetDisplayId,
+
+        vendor: trx.vendor,
+        requester: trx.requester,
+
+        projectCode: trx.projectCode,
+        noUi: trx.noUi,
+
+        prNumber: trx.prNumber,
+        poType: trx.poType,
+        poNumber: trx.poNumber,
+        documentGr: trx.documentGr,
+
+        description: trx.description,
+        qty: trx.qty,
+        amount: trx.amount.toString(), // ✅ FIX BIGINT
+
+        assetNumber: trx.assetNumber,
+
+        submissionDate: trx.submissionDate,
+        approvedDate: trx.approvedDate,
+        deliveryStatus: trx.deliveryStatus,
+
+        oc: trx.oc,
+        ccLob: trx.ccLob,
+        status: trx.status,
+        notes: trx.notes,
+      })),
+      total,
+    });
+  } catch (err) {
+    console.error("[GET TRANSACTION CAPEX ERROR]", err);
     return NextResponse.json(
-      { error: "Gagal mengambil transaksi CAPEX" },
+      { error: "Gagal mengambil data transaksi CAPEX" },
       { status: 500 }
     );
   }
 }
 
 /**
- * =====================================================
- * POST — CREATE TRANSACTION CAPEX
- * =====================================================
+ * =========================================================
+ * POST — CREATE TRANSACTION CAPEX WITH BUDGET UPDATE
+ * =========================================================
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const {
-      budgetPlanCapexId,
-      vendor,
-      requester,
-      description,
-      qty,
-      amount,
-      status,
-    } = body;
-
-    if (
-      !budgetPlanCapexId ||
-      !vendor ||
-      !requester ||
-      !description ||
-      qty === undefined ||
-      amount === undefined ||
-      !status
-    ) {
-      return NextResponse.json(
-        { error: "Field wajib belum lengkap" },
-        { status: 400 }
-      );
-    }
-
-    const plan = await prisma.budgetPlanCapex.findUnique({
-      where: { id: budgetPlanCapexId },
+    // 1️⃣ Validasi budget plan exists
+    const budgetPlan = await prisma.budgetPlanCapex.findUnique({
+      where: { id: body.budgetPlanCapexId },
+      select: { 
+        id: true,
+        year: true,
+        budgetRemainingAmount: true 
+      },
     });
 
-    if (!plan) {
+    if (!budgetPlan) {
       return NextResponse.json(
-        { error: "Budget Plan CAPEX tidak ditemukan" },
+        { error: "Budget plan tidak ditemukan" },
         { status: 404 }
       );
     }
 
-    const trxAmount = BigInt(amount);
+    const amount = BigInt(body.amount);
 
-    if (trxAmount > plan.budgetRemainingAmount) {
+    // 2️⃣ Cek apakah budget mencukupi
+    if (budgetPlan.budgetRemainingAmount < amount) {
       return NextResponse.json(
-        { error: "Budget CAPEX tidak mencukupi" },
+        { error: "Budget tidak mencukupi" },
         { status: 400 }
       );
     }
 
-    /**
-     * =================================================
-     * GENERATE TRANSACTION DISPLAY ID
-     * Format: TRX-CA-YY-XXXX
-     * =================================================
-     */
-    const yearShort = String(plan.year).slice(-2);
-
-    const last = await prisma.transactionCapex.findFirst({
+    // 3️⃣ Generate display ID (TRX-CA-YY-XXXX)
+    // ✅ Pakai tahun SEKARANG (seperti OPEX), bukan tahun budget
+    const year = new Date().getFullYear().toString().slice(-2);
+    const lastTrx = await prisma.transactionCapex.findFirst({
       where: {
-        transactionDisplayId: { startsWith: `TRX-CA-${yearShort}` },
+        transactionDisplayId: {
+          startsWith: `TRX-CA-${year}-`,
+        },
       },
-      orderBy: { transactionDisplayId: "desc" },
-      select: { transactionDisplayId: true },
+      orderBy: {
+        transactionDisplayId: "desc",
+      },
     });
 
-    const next = last
-      ? Number(last.transactionDisplayId.slice(-4)) + 1
-      : 1;
+    let nextNumber = 1;
+    if (lastTrx) {
+      const lastNumber = parseInt(lastTrx.transactionDisplayId.split("-").pop() || "0");
+      nextNumber = lastNumber + 1;
+    }
 
-    const transactionDisplayId = `TRX-CA-${yearShort}-${String(next).padStart(
-      4,
-      "0"
-    )}`;
+    const transactionDisplayId = `TRX-CA-${year}-${String(nextNumber).padStart(4, "0")}`;
 
-    /**
-     * =================================================
-     * TRANSACTION DB (ATOMIC)
-     * =================================================
-     */
-    const result = await prisma.$transaction(async (tx) => {
-      const created = await tx.transactionCapex.create({
-        data: {
-          transactionDisplayId,
-          budgetPlanCapexId,
-          vendor,
-          requester,
-          description,
-          qty,
-          amount: trxAmount,
-          status,
-        },
-      });
+    // 4️⃣ Create transaksi
+    await prisma.transactionCapex.create({
+      data: {
+        transactionDisplayId,
+        budgetPlanCapexId: budgetPlan.id,
 
-      await tx.budgetPlanCapex.update({
-        where: { id: budgetPlanCapexId },
-        data: {
-          budgetRealisasiAmount:
-            plan.budgetRealisasiAmount + trxAmount,
-          budgetRemainingAmount:
-            plan.budgetRemainingAmount - trxAmount,
-        },
-      });
+        vendor: body.vendor,
+        requester: body.requester,
 
-      return created;
+        projectCode: body.projectCode || null,
+        noUi: body.noUi || null,
+
+        prNumber: body.prNumber || null,
+        poType: body.poType || null,
+        poNumber: body.poNumber || null,
+        documentGr: body.documentGR || null,
+
+        description: body.description,
+        assetNumber: body.assetNumber || null,
+
+        qty: Number(body.qty),
+        amount: amount,
+
+        submissionDate: body.submissionDate
+          ? new Date(body.submissionDate)
+          : null,
+        approvedDate: body.approvedDate
+          ? new Date(body.approvedDate)
+          : null,
+
+        deliveryStatus: body.deliveryStatus || null,
+
+        oc: body.oc || null,
+        ccLob: body.ccLob || null,
+        status: body.status,
+        notes: body.notes || null,
+      },
     });
 
+    // 5️⃣ Update budget plan
+    await prisma.budgetPlanCapex.update({
+      where: { id: budgetPlan.id },
+      data: {
+        budgetRealisasiAmount: {
+          increment: amount,
+        },
+        budgetRemainingAmount: {
+          decrement: amount,
+        },
+      },
+    });
+
+    return NextResponse.json({ 
+      success: true,
+      transactionDisplayId 
+    });
+  } catch (err) {
+    console.error("[POST TRANSACTION CAPEX ERROR]", err);
     return NextResponse.json(
-      serialize({
-        success: true,
-        id: result.id,
-        transactionDisplayId: result.transactionDisplayId,
-      })
-    );
-  } catch (error) {
-    console.error("POST TRANSACTION CAPEX ERROR:", error);
-    return NextResponse.json(
-      { error: "Gagal menyimpan transaksi CAPEX" },
+      { error: "Gagal membuat transaksi" },
       { status: 500 }
     );
   }

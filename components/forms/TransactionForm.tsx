@@ -166,7 +166,6 @@ export default function TransactionForm({
             Amount
             {remainingBudget && (
               <span className="text-orange-600 ml-2">
-                💰 Sisa Budget: Rp {remainingBudget}
               </span>
             )}
             <span className="text-red-500 ml-1">*</span>

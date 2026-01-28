@@ -133,7 +133,7 @@ model TransactionCapex {
 
   submissionDate         DateTime? @map("submission_date")
   approvedDate           DateTime? @map("approved_date")
-  deliveryDate           DateTime? @map("delivery_date")
+  deliveryStatus         String?   @map("delivery_status") // ✅ SATU-SATUNYA PERUBAHAN
 
   oc                     String?  @map("o_c")
   ccLob                  String?  @map("cc_lob")

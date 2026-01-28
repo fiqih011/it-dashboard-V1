@@ -21,6 +21,7 @@ export async function GET(
             id: true,
             budgetDisplayId: true,
             itemCode: true,
+            budgetRemainingAmount: true, // ✅ TAMBAH INI
           },
         },
       },
@@ -39,16 +40,29 @@ export async function GET(
 
       budgetPlanCapexId: trx.budgetPlanCapexId,
       budgetPlanDisplayId: trx.budgetPlan.budgetDisplayId,
+      budgetRemainingAmount: trx.budgetPlan.budgetRemainingAmount.toString(), // ✅ TAMBAH INI
 
       vendor: trx.vendor,
       requester: trx.requester,
+      
+      // ✅ TAMBAH SEMUA FIELD YANG KURANG
+      projectCode: trx.projectCode,
+      noUi: trx.noUi,
+      
+      prNumber: trx.prNumber,
+      poType: trx.poType,
+      poNumber: trx.poNumber,
+      documentGr: trx.documentGr,
+      
       description: trx.description,
+      assetNumber: trx.assetNumber,
+      
       qty: Number(trx.qty),
       amount: trx.amount.toString(),
 
       submissionDate: trx.submissionDate,
       approvedDate: trx.approvedDate,
-      deliveryDate: trx.deliveryDate,
+      deliveryStatus: trx.deliveryStatus, // ✅ GANTI deliveryDate jadi deliveryStatus
 
       oc: trx.oc,
       ccLob: trx.ccLob,
@@ -59,6 +73,7 @@ export async function GET(
         id: trx.budgetPlan.id,
         budgetDisplayId: trx.budgetPlan.budgetDisplayId,
         itemCode: trx.budgetPlan.itemCode,
+        budgetRemainingAmount: trx.budgetPlan.budgetRemainingAmount.toString(), // ✅ TAMBAH INI
       },
     });
   } catch (err) {
@@ -110,7 +125,19 @@ export async function PUT(
       data: {
         vendor: body.vendor,
         requester: body.requester,
+        
+        // ✅ TAMBAH FIELD YANG KURANG
+        projectCode: body.projectCode || null,
+        noUi: body.noUi || null,
+        
+        prNumber: body.prNumber || null,
+        poType: body.poType || null,
+        poNumber: body.poNumber || null,
+        documentGr: body.documentGR || null, // ⚠️ body.documentGR → db.documentGr
+        
         description: body.description || null,
+        assetNumber: body.assetNumber || null,
+        
         qty: Number(body.qty),
         amount: newAmount,
 
@@ -120,9 +147,8 @@ export async function PUT(
         approvedDate: body.approvedDate
           ? new Date(body.approvedDate)
           : null,
-        deliveryDate: body.deliveryDate
-          ? new Date(body.deliveryDate)
-          : null,
+        
+        deliveryStatus: body.deliveryStatus || null, // ✅ GANTI deliveryDate jadi deliveryStatus
 
         oc: body.oc || null,
         ccLob: body.ccLob || null,
@@ -148,8 +174,7 @@ export async function PUT(
 
     return NextResponse.json({
       success: true,
-      message:
-        "Transaksi CAPEX berhasil diupdate dan budget plan telah disesuaikan",
+      message: "Transaksi CAPEX berhasil diupdate dan budget plan telah disesuaikan",
     });
   } catch (err) {
     console.error("[PUT TRANSACTION CAPEX ERROR]", err);
@@ -209,8 +234,7 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message:
-        "Transaksi CAPEX berhasil dihapus dan budget plan dikembalikan",
+      message: "Transaksi CAPEX berhasil dihapus dan budget plan dikembalikan",
     });
   } catch (err) {
     console.error("[DELETE TRANSACTION CAPEX ERROR]", err);
