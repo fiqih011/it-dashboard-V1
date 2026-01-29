@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FileText, Briefcase } from "lucide-react";
+import { BarChart3, Briefcase } from "lucide-react";
 
-export default function BudgetPlanLandingPage() {
+export default function DashboardLandingPage() {
   const router = useRouter();
 
   return (
@@ -11,10 +11,10 @@ export default function BudgetPlanLandingPage() {
       {/* ================= HEADER ================= */}
       <div className="pb-4 border-b border-gray-200">
         <h1 className="text-2xl font-semibold text-gray-900">
-          Budget Plan
+          Dashboard
         </h1>
         <p className="mt-1 text-sm text-gray-500">
-          Pilih jenis budget yang ingin dikelola
+          Pilih jenis dashboard yang ingin dilihat
         </p>
       </div>
 
@@ -27,29 +27,28 @@ export default function BudgetPlanLandingPage() {
 
           <div>
             <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-              <FileText className="h-5 w-5" />
+              <BarChart3 className="h-5 w-5" />
             </div>
 
             <h2 className="text-lg font-semibold text-gray-900">
-              OPEX
+              Dashboard OPEX
             </h2>
             <p className="mt-1 text-sm text-gray-500">
               Operational Expenditure
             </p>
 
             <p className="mt-4 text-sm text-gray-600">
-              Budget operasional tahunan untuk kebutuhan rutin
-              perusahaan seperti layanan, langganan, dan operasional
-              harian.
+              Ringkasan dan analisis budget operasional tahunan,
+              realisasi, dan sisa anggaran OPEX.
             </p>
           </div>
 
           <div className="mt-6">
             <button
-              onClick={() => router.push("/budget-plan/opex")}
+              onClick={() => router.push("/dashboard/opex")}
               className="inline-flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-100"
             >
-              View Budget Plan
+              View Dashboard
               <span aria-hidden>→</span>
             </button>
           </div>
@@ -66,24 +65,24 @@ export default function BudgetPlanLandingPage() {
             </div>
 
             <h2 className="text-lg font-semibold text-gray-900">
-              CAPEX
+              Dashboard CAPEX
             </h2>
             <p className="mt-1 text-sm text-gray-500">
               Capital Expenditure
             </p>
 
             <p className="mt-4 text-sm text-gray-600">
-              Budget investasi aset dan pengeluaran jangka panjang
-              seperti perangkat, infrastruktur, dan proyek strategis.
+              Ringkasan investasi aset, realisasi CAPEX, dan
+              pengeluaran jangka panjang perusahaan.
             </p>
           </div>
 
           <div className="mt-6">
             <button
-              onClick={() => router.push("/budget-plan/capex")}
+              onClick={() => router.push("/dashboard/capex")}
               className="inline-flex items-center gap-2 rounded-md border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 transition hover:bg-violet-100"
             >
-              View Budget Plan
+              View Dashboard
               <span aria-hidden>→</span>
             </button>
           </div>

@@ -15,7 +15,7 @@ import {
 const menus = [
   {
     label: "Dashboard",
-    href: "/dashboard/opex",
+    href: "/dashboard",
     icon: LayoutDashboard,
   },
   {
