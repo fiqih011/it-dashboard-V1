@@ -64,7 +64,7 @@ export default function DashboardOpexPage() {
           title="Total Realisasi"
           value={format(totalUsed)}
           badge={`${percent}%`}
-          color="indigo"
+          color="purple"
           icon={<TrendingUp className="w-5 h-5" />}
           loading={loading}
         />

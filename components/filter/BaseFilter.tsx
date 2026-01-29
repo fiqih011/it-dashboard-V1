@@ -1,7 +1,9 @@
 "use client";
 
-import { ChangeEvent } from "react";
 import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import SearchableSelect from "@/components/ui/SearchableSelect";
+
 import {
   BaseFilterProps,
   FilterFieldConfig,
@@ -12,7 +14,7 @@ type Props<T> = BaseFilterProps<T> & {
 };
 
 export default function BaseFilter<
-  T extends Record<string, any>
+  T extends Record<string, string | undefined>
 >(props: Props<T>) {
   const {
     value,
@@ -22,101 +24,68 @@ export default function BaseFilter<
     fields,
   } = props;
 
-  function handleChange<K extends keyof T>(
+  function setValue<K extends keyof T>(
     key: K,
-    e: ChangeEvent<
-      HTMLInputElement | HTMLSelectElement
-    >
+    val?: string
   ) {
     onChange({
       ...value,
-      [key]: e.target.value,
+      [key]: val,
     });
   }
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
       {/* FILTER FIELDS */}
-      <div
-        className="
-          grid
-          grid-cols-1
-          sm:grid-cols-2
-          lg:grid-cols-3
-          xl:grid-cols-6
-          gap-4
-        "
-      >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {fields.map((field) => (
           <div
             key={String(field.key)}
             className="space-y-1"
           >
-            <label className="text-sm font-medium text-gray-700">
-              {field.label}
-            </label>
-
+            {/* ===================== */}
+            {/* TEXT INPUT */}
+            {/* ===================== */}
             {field.type === "text" && (
-              <input
-                type="text"
-                placeholder={field.placeholder}
-                value={
-                  (value[field.key] as string) ?? ""
-                }
-                onChange={(e) =>
-                  handleChange(field.key, e)
-                }
-                className="
-                  w-full
-                  rounded-md
-                  border
-                  border-gray-300
-                  px-3
-                  py-2
-                  text-sm
-                  text-gray-900
-                  placeholder-gray-400
-                  focus:outline-none
-                  focus:ring-2
-                  focus:ring-blue-500
-                "
+              <Input
+                label={field.label}
+                placeholder={field.placeholder || ""}
+                value={value[field.key] ?? ""}
+                onChange={(val) => setValue(field.key, val)}
+                disabled={false}
               />
             )}
 
+            {/* ===================== */}
+            {/* SEARCHABLE SELECT */}
+            {/* ===================== */}
             {field.type === "select" && (
-              <select
-                value={
-                  (value[field.key] as string) ?? ""
-                }
-                onChange={(e) =>
-                  handleChange(field.key, e)
-                }
-                className="
-                  w-full
-                  rounded-md
-                  border
-                  border-gray-300
-                  px-3
-                  py-2
-                  text-sm
-                  text-gray-900
-                  focus:outline-none
-                  focus:ring-2
-                  focus:ring-blue-500
-                "
-              >
-                <option value="">
-                  All
-                </option>
-                {field.options?.map((opt) => (
-                  <option
-                    key={opt.value}
-                    value={opt.value}
-                  >
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-600">
+                  {field.label}
+                </label>
+
+                <SearchableSelect
+                  value={value[field.key]}
+                  options={[
+                    "",
+                    ...(field.options
+                      ? field.options.map(
+                          (o) => o.value
+                        )
+                      : []),
+                  ]}
+                  placeholder={`Ketik / pilih ${field.label}`} // ✅ DESCRIPTIVE PLACEHOLDER
+                  onChange={(val) =>
+                    setValue(
+                      field.key,
+                      val === ""
+                        ? undefined
+                        : val
+                    )
+                  }
+                />
+              </div>
             )}
           </div>
         ))}

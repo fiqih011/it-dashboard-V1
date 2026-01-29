@@ -1,10 +1,18 @@
 "use client";
 
-import { BudgetPlanFilterValue } from "./types";
-import { budgetPlanFilterConfig } from "./budgetPlan.config";
+import type { BudgetPlanFilterValue } from "./types";
+import Button from "@/components/ui/Button";
+import SearchableSelect from "@/components/ui/SearchableSelect";
 
 type Props = {
   value: BudgetPlanFilterValue;
+  options: {
+    year: string[];
+    displayId: string[];
+    coa: string[];
+    category: string[];
+    component: string[];
+  };
   onChange: (value: BudgetPlanFilterValue) => void;
   onSearch: () => void;
   onReset: () => void;
@@ -12,60 +20,92 @@ type Props = {
 
 export default function BudgetPlanFilter({
   value,
+  options,
   onChange,
   onSearch,
   onReset,
 }: Props) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
-      {/* ========================= */}
-      {/* FILTER INPUTS — 1 BARIS */}
-      {/* ========================= */}
-      <div className="grid grid-cols-12 gap-3">
-        {budgetPlanFilterConfig.map((field) => (
-          <div
-            key={String(field.key)}
-            className="col-span-2"
-          >
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              {field.label}
-            </label>
+      {/* FILTER GRID — SAMA DENGAN CAPEX */}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+        {/* ROW 1 */}
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Tahun
+          </label>
+          <SearchableSelect
+            value={value.year}
+            options={options.year}
+            placeholder="Pilih Tahun"
+            onChange={(v) => onChange({ ...value, year: v })}
+          />
+        </div>
 
-            <input
-              type={field.type ?? "text"}
-              placeholder={field.placeholder}
-              value={(value as any)[field.key] ?? ""}
-              onChange={(e) =>
-                onChange({
-                  ...value,
-                  [field.key]: e.target.value,
-                })
-              }
-              className="w-full h-9 px-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-        ))}
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Budget ID
+          </label>
+          <SearchableSelect
+            value={value.displayId}
+            options={options.displayId}
+            placeholder="Ketik / pilih Budget ID"
+            onChange={(v) =>
+              onChange({ ...value, displayId: v })
+            }
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            COA
+          </label>
+          <SearchableSelect
+            value={value.coa}
+            options={options.coa}
+            placeholder="Ketik / pilih COA"
+            onChange={(v) => onChange({ ...value, coa: v })}
+          />
+        </div>
+
+        {/* ROW 2 */}
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Category
+          </label>
+          <SearchableSelect
+            value={value.category}
+            options={options.category}
+            placeholder="Ketik / pilih Category"
+            onChange={(v) =>
+              onChange({ ...value, category: v })
+            }
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Component
+          </label>
+          <SearchableSelect
+            value={value.component}
+            options={options.component}
+            placeholder="Ketik / pilih Component"
+            onChange={(v) =>
+              onChange({ ...value, component: v })
+            }
+          />
+        </div>
       </div>
 
-      {/* ========================= */}
-      {/* ACTION BUTTONS — BARIS 2 */}
-      {/* ========================= */}
+      {/* ACTION */}
       <div className="mt-4 flex gap-2">
-        <button
-          type="button"
-          onClick={onSearch}
-          className="h-9 px-5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        >
+        <Button variant="primary" onClick={onSearch}>
           Search
-        </button>
-
-        <button
-          type="button"
-          onClick={onReset}
-          className="h-9 px-5 text-sm border border-gray-300 rounded-md hover:bg-gray-100"
-        >
+        </Button>
+        <Button variant="secondary" onClick={onReset}>
           Reset
-        </button>
+        </Button>
       </div>
     </div>
   );

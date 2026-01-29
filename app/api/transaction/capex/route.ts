@@ -19,11 +19,11 @@ export async function GET(req: NextRequest) {
     const take = pageSize;
 
     // =========================
-    // FILTER PARAMS
+    // ✅ FILTER PARAMS (FIXED - MATCH CONFIG)
     // =========================
     const year = searchParams.get("year") ?? undefined;
-    const transactionId = searchParams.get("transactionId") ?? undefined;
-    const budgetId = searchParams.get("budgetId") ?? undefined;
+    const transactionId = searchParams.get("transactionDisplayId") ?? undefined; // ✅ FIX
+    const budgetId = searchParams.get("budgetPlanDisplayId") ?? undefined;       // ✅ FIX
     const vendor = searchParams.get("vendor") ?? undefined;
     const requester = searchParams.get("requester") ?? undefined;
     const description = searchParams.get("description") ?? undefined;

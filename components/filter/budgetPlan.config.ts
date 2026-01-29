@@ -1,5 +1,7 @@
-import { FilterFieldConfig } from "./types";
-import { BudgetPlanFilterValue } from "./types";
+import {
+  FilterFieldConfig,
+  BudgetPlanFilterValue,
+} from "./types";
 
 export const budgetPlanFilterConfig: FilterFieldConfig<BudgetPlanFilterValue>[] =
   [
@@ -15,12 +17,12 @@ export const budgetPlanFilterConfig: FilterFieldConfig<BudgetPlanFilterValue>[] 
       type: "text",
       placeholder: "",
     },
-     {
-    key: "coa",
-    label: "COA",
-    type: "text",
-    placeholder: "",
-  },
+    {
+      key: "coa",
+      label: "COA",
+      type: "text",
+      placeholder: "",
+    },
     {
       key: "category",
       label: "Category",

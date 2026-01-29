@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BudgetPlanOpex } from "@prisma/client";
 import { ArrowLeft } from "lucide-react";
@@ -18,17 +18,7 @@ import InputTransactionModal from "@/components/modal/InputTransactionModal";
 
 import Button from "@/components/ui/Button";
 import { showSuccess } from "@/lib/swal";
-
-/* ===============================
- * FILTER TYPE (LOCAL & SAFE)
- * =============================== */
-type BudgetPlanFilterValue = {
-  year?: string;
-  displayId?: string;
-  coa?: string;
-  category?: string;
-  component?: string;
-};
+import type { BudgetPlanFilterValue } from "@/components/filter/types";
 
 export default function BudgetPlanOpexPage() {
   const router = useRouter();
@@ -123,6 +113,31 @@ export default function BudgetPlanOpexPage() {
   }, [page, pageSize, appliedFilters]);
 
   /* ===============================
+   * FILTER OPTIONS (DATA-DRIVEN)
+   * =============================== */
+  const filterOptions = useMemo(() => {
+    const uniq = (arr: (string | null | undefined)[]) =>
+      Array.from(
+        new Set(
+          arr
+            .filter(
+              (v): v is string =>
+                typeof v === "string" && v.trim() !== ""
+            )
+            .map((v) => v.trim())
+        )
+      ).sort();
+
+    return {
+      year: uniq(rawRows.map((r) => String(r.year))),
+      displayId: uniq(rawRows.map((r) => r.displayId)),
+      coa: uniq(rawRows.map((r) => r.coa)),
+      category: uniq(rawRows.map((r) => r.category)),
+      component: uniq(rawRows.map((r) => r.component)),
+    };
+  }, [rawRows]);
+
+  /* ===============================
    * INPUT TRANSACTION
    * =============================== */
   const handleOpenInputModal = (
@@ -139,9 +154,8 @@ export default function BudgetPlanOpexPage() {
 
   return (
     <div className="space-y-6">
-      {/* ================= HEADER BAR ================= */}
+      {/* HEADER */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        {/* LEFT */}
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push("/budget-plan")}
@@ -156,7 +170,6 @@ export default function BudgetPlanOpexPage() {
           </h1>
         </div>
 
-        {/* RIGHT */}
         <Button
           variant="primary"
           onClick={() => setOpenCreate(true)}
@@ -168,6 +181,7 @@ export default function BudgetPlanOpexPage() {
       {/* FILTER */}
       <BudgetPlanFilter
         value={draftFilters}
+        options={filterOptions}
         onChange={setDraftFilters}
         onSearch={() => {
           setPage(1);

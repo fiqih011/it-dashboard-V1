@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import TransactionFilter from "@/components/filter/TransactionFilter";
-import { TransactionFilterValue } from "@/components/filter/types";
+import {
+  TransactionFilterValue,
+  FilterFieldConfig,
+  FilterOption,
+} from "@/components/filter/types";
+import { transactionFilterConfig } from "@/components/filter/transaction.config";
 
 import PaginationBar from "@/components/table/PaginationBar";
 import TransactionCapexTable, {
@@ -14,27 +19,78 @@ import TransactionCapexTable, {
 import EditTransactionCapexModal from "@/components/modal/EditTransactionCapexModal";
 import { showError, showSuccess } from "@/lib/swal";
 
+/**
+ * =========================================
+ * HELPERS
+ * =========================================
+ */
+function toOptions(values: Array<string | null | undefined>): FilterOption[] {
+  return Array.from(
+    new Set(
+      values
+        .filter((v): v is string => !!v && v.trim() !== "")
+        .map((v) => v.trim())
+    )
+  )
+    .sort()
+    .map((v) => ({ label: v, value: v }));
+}
+
 export default function TransactionsCapexPage() {
   const router = useRouter();
 
+  // =========================
+  // TABLE DATA
+  // =========================
   const [rows, setRows] = useState<TransactionCapexRow[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // FILTER
+  // =========================
+  // ✅ STABLE FILTER OPTIONS (DARI FETCH PERTAMA)
+  // =========================
+  const [stableOptions, setStableOptions] = useState<{
+    years: FilterOption[];
+    transactionIds: FilterOption[];
+    budgetPlanIds: FilterOption[];
+    vendors: FilterOption[];
+    requesters: FilterOption[];
+    descriptions: FilterOption[];
+  }>({
+    years: [],
+    transactionIds: [],
+    budgetPlanIds: [],
+    vendors: [],
+    requesters: [],
+    descriptions: [],
+  });
+
+  // =========================
+  // FILTER STATE
+  // =========================
   const [draftFilters, setDraftFilters] =
     useState<TransactionFilterValue>({});
   const [appliedFilters, setAppliedFilters] =
     useState<TransactionFilterValue>({});
 
+  // =========================
+  // PAGINATION
+  // =========================
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
 
+  // =========================
   // EDIT MODAL
+  // =========================
   const [openEdit, setOpenEdit] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  async function fetchData() {
+  /**
+   * =========================================
+   * ✅ FETCH TABLE DATA (DENGAN STABLE OPTIONS)
+   * =========================================
+   */
+  async function fetchTableData(isInitial = false) {
     try {
       setLoading(true);
 
@@ -43,55 +99,109 @@ export default function TransactionsCapexPage() {
         pageSize: String(pageSize),
       });
 
+      // ✅ Apply filters
       Object.entries(appliedFilters).forEach(([key, value]) => {
-        if (
-          value !== undefined &&
-          value !== null &&
-          String(value).trim() !== ""
-        ) {
-          params.set(key, String(value));
+        if (value && value.trim() !== "") {
+          params.set(key, value);
         }
       });
 
-      const res = await fetch(
-        `/api/transaction/capex?${params.toString()}`
-      );
-
-      if (!res.ok) {
-        throw new Error("Gagal mengambil data transaksi CAPEX");
-      }
+      const res = await fetch(`/api/transaction/capex?${params.toString()}`);
+      if (!res.ok) throw new Error("Gagal mengambil data transaksi CAPEX");
 
       const json = await res.json();
       setRows(json.data ?? []);
       setTotal(json.total ?? 0);
+
+      // ✅ POLA BUDGET PLAN: Simpan options hanya dari fetch pertama
+      if (isInitial && json.data && json.data.length > 0) {
+        const data = json.data as TransactionCapexRow[];
+        
+        setStableOptions({
+          years: toOptions(
+            data.map((r) =>
+              r.submissionDate
+                ? new Date(r.submissionDate).getFullYear().toString()
+                : null
+            )
+          ),
+          transactionIds: toOptions(data.map((r) => r.transactionDisplayId)),
+          budgetPlanIds: toOptions(data.map((r) => r.budgetPlanCapexId)),
+          vendors: toOptions(data.map((r) => r.vendor)),
+          requesters: toOptions(data.map((r) => r.requester)),
+          descriptions: toOptions(data.map((r) => r.description)),
+        });
+      }
     } catch (err) {
-      showError(
-        err instanceof Error ? err.message : "Unknown error"
-      );
+      showError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setLoading(false);
     }
   }
 
+  // ✅ Initial fetch dengan stable options
   useEffect(() => {
-    fetchData();
+    fetchTableData(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ✅ Subsequent fetches (pagination, filter) TANPA update options
+  useEffect(() => {
+    if (stableOptions.years.length > 0) {
+      fetchTableData(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pageSize, appliedFilters]);
 
-  async function handleDelete(id: string): Promise<boolean> {
-    const res = await fetch(
-      `/api/transaction/capex/${id}`,
-      { method: "DELETE" }
-    );
+  /**
+   * =========================================
+   * ✅ FILTER CONFIG (GUNAKAN STABLE OPTIONS)
+   * =========================================
+   */
+  const filterFields: FilterFieldConfig<TransactionFilterValue>[] = useMemo(() => {
+    return transactionFilterConfig.map((field) => {
+      if (field.type !== "select") return field;
 
+      switch (field.key) {
+        case "year":
+          return { ...field, options: stableOptions.years };
+
+        case "transactionDisplayId":
+          return { ...field, options: stableOptions.transactionIds };
+
+        case "budgetPlanDisplayId":
+          return { ...field, options: stableOptions.budgetPlanIds };
+
+        case "vendor":
+          return { ...field, options: stableOptions.vendors };
+
+        case "requester":
+          return { ...field, options: stableOptions.requesters };
+
+        case "description":
+          return { ...field, options: stableOptions.descriptions };
+
+        default:
+          return field;
+      }
+    });
+  }, [stableOptions]);
+
+  /**
+   * =========================================
+   * ACTIONS
+   * =========================================
+   */
+  async function handleDelete(id: string): Promise<boolean> {
+    const res = await fetch(`/api/transaction/capex/${id}`, { method: "DELETE" });
     if (!res.ok) {
-      const err = await res.json().catch(() => null);
-      showError(err?.error ?? "Gagal menghapus transaksi");
+      const err = await res.json();
+      showError(err.error ?? "Gagal menghapus transaksi");
       return false;
     }
 
     showSuccess("Transaksi CAPEX berhasil dihapus");
-    fetchData();
+    fetchTableData(false);
     return true;
   }
 
@@ -100,27 +210,22 @@ export default function TransactionsCapexPage() {
     setOpenEdit(true);
   }
 
-  if (loading) {
+  if (loading && stableOptions.years.length === 0) {
     return <div className="p-6">Loading transaksi CAPEX…</div>;
   }
 
   return (
     <div className="space-y-6 p-6">
-      {/* HEADER */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.push("/transactions")}
-          className="inline-flex items-center gap-2 rounded-md bg-slate-300 px-3 py-2 text-sm text-slate-800 hover:bg-slate-400 transition"
+          className="inline-flex items-center gap-2 rounded-md bg-slate-300 px-3 py-2 text-sm"
         >
           ← Back
         </button>
-
-        <h1 className="text-xl font-semibold text-gray-900">
-          Tabel Transaksi CAPEX
-        </h1>
+        <h1 className="text-xl font-semibold">Tabel Transaksi CAPEX</h1>
       </div>
 
-      {/* FILTER */}
       <TransactionFilter
         value={draftFilters}
         onChange={setDraftFilters}
@@ -133,16 +238,15 @@ export default function TransactionsCapexPage() {
           setAppliedFilters({});
           setPage(1);
         }}
+        fields={filterFields}
       />
 
-      {/* TABLE */}
       <TransactionCapexTable
         rows={rows}
         onEdit={handleEdit}
         onDelete={handleDelete}
       />
 
-      {/* PAGINATION */}
       <PaginationBar
         page={page}
         pageSize={pageSize}
@@ -154,7 +258,6 @@ export default function TransactionsCapexPage() {
         }}
       />
 
-      {/* EDIT MODAL */}
       <EditTransactionCapexModal
         open={openEdit}
         transactionId={selectedId}
@@ -162,7 +265,7 @@ export default function TransactionsCapexPage() {
           setOpenEdit(false);
           setSelectedId(null);
         }}
-        onSuccess={fetchData}
+        onSuccess={() => fetchTableData(false)}
       />
     </div>
   );

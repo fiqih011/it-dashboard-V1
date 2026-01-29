@@ -1,48 +1,47 @@
-import { FilterFieldConfig } from "./types";
-import { TransactionFilterValue } from "./types";
+import { FilterFieldConfig, TransactionFilterValue } from "./types";
 
 /**
- * NOTE:
- * - Semua key HARUS match dengan query param API
- * - Tidak ada logic di sini (config only)
+ * =========================================
+ * TRANSACTION FILTER CONFIG
+ * ✅ SEMUA FIELD = SELECT (DATA-DRIVEN)
+ * =========================================
  */
-
 export const transactionFilterConfig: FilterFieldConfig<TransactionFilterValue>[] =
   [
     {
       key: "year",
       label: "Tahun",
-      type: "text",
-      placeholder: "Tahun (contoh: 2025)", // ✅ FIX: String dengan quotes
+      type: "select",
+      placeholder: "",
     },
     {
-      key: "transactionId",
+      key: "transactionDisplayId",
       label: "Transaction ID",
-      type: "text",
-      placeholder: "TRX-OP-25-XXXX",
+      type: "select",
+      placeholder: "",
     },
     {
-      key: "budgetId",
+      key: "budgetPlanDisplayId",
       label: "Budget ID",
-      type: "text",
-      placeholder: "OP-25-XXXX",
+      type: "select",
+      placeholder: "",
     },
     {
       key: "vendor",
       label: "Vendor",
-      type: "text",
-      placeholder: "Nama vendor",
+      type: "select",
+      placeholder: "",
     },
     {
       key: "requester",
       label: "Requester",
-      type: "text",
-      placeholder: "Nama requester",
+      type: "select",
+      placeholder: "",
     },
     {
       key: "description",
       label: "Description",
-      type: "text",
-      placeholder: "Deskripsi transaksi",
+      type: "select",
+      placeholder: "",
     },
   ];

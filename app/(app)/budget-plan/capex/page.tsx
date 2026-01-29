@@ -9,8 +9,8 @@ import BudgetPlanCapexTable, {
   BudgetPlanCapexRow,
 } from "@/components/table/BudgetPlanCapexTable";
 import PaginationBar from "@/components/table/PaginationBar";
-import BudgetPlanCapexFilter from "@/components/filter/capex/BudgetPlanCapexFilter";
-import type { BudgetPlanCapexFilterValue } from "@/components/filter/capex/types";
+import BudgetPlanCapexFilter from "@/components/filter/BudgetPlanCapexFilter";
+import type { BudgetPlanCapexFilterValue } from "@/components/filter/types";
 
 import CreateBudgetPlanCapexModal from "@/components/modal/CreateBudgetPlanCapexModal";
 import EditBudgetPlanCapexModal from "@/components/modal/EditBudgetPlanCapexModal";
