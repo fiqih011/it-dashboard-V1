@@ -54,7 +54,11 @@ export async function GET(req: NextRequest) {
         contains: searchParams.get("noCapex"),
         mode: "insensitive",
       };
-
+    if (searchParams.get("itemRemark"))
+      where.itemRemark = {
+        contains: searchParams.get("itemRemark"),
+        mode: "insensitive",
+      };
     const [data, total] = await Promise.all([
       prisma.budgetPlanCapex.findMany({
         where,
