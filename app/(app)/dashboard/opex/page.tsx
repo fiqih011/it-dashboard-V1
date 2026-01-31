@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { DollarSign, TrendingUp, CheckCircle } from "lucide-react";
+import { DollarSign, TrendingUp, CheckCircle, ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import SummaryCard from "@/components/ui/SummaryCard";
 import StatusLegend from "@/components/ui/StatusLegend";
@@ -16,6 +17,7 @@ interface Summary {
 }
 
 export default function DashboardOpexPage() {
+  const router = useRouter();
   const [budgetData, setBudgetData] = useState<BudgetUsageItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,8 +106,15 @@ export default function DashboardOpexPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with Back Button */}
       <div className="mb-2">
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="mb-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Dashboard Menu</span>
+        </button>
         <h1 className="text-3xl font-bold text-gray-800">Dashboard OPEX</h1>
         <p className="text-gray-600 mt-1">
           Ringkasan penggunaan budget operasional

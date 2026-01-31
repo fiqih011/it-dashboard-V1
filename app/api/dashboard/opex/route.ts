@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 /**
  * =========================================================
- * GET – DASHBOARD OPEX : BUDGET USAGE
+ * GET — DASHBOARD OPEX : BUDGET USAGE
  * =========================================================
  * READ ONLY
  * - Summary pemakaian budget per Budget Plan OPEX
@@ -18,6 +18,7 @@ export async function GET() {
       select: {
         id: true,              // ✅ Internal UUID
         displayId: true,       // ✅ Display ID (OP-250001)
+        coa: true,
         component: true,
         budgetPlanAmount: true,
       },
@@ -68,6 +69,7 @@ export async function GET() {
       return {
         budgetId: plan.displayId,              // ✅ Display ID untuk UI
         budgetInternalId: plan.id,             // ✅ UUID untuk API call
+        coa: plan.coa,
         name: plan.component,
         totalBudget: Number(totalBudget),
         used: Number(used),

@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertCircle, CheckCircle, MinusCircle, TrendingUp, RefreshCw, Eye } from "lucide-react";
+import { AlertCircle, CheckCircle, MinusCircle, TrendingUp, RefreshCw, Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { useState } from "react";
 import Button from "@/components/ui/Button";
 
 export type BudgetUsageItemCapex = {
@@ -21,6 +22,9 @@ type Props = {
   onRefresh?: () => void;
   onViewDetails?: (budgetInternalId: string) => void;
 };
+
+type SortField = 'budgetId' | 'itemCode' | 'itemDescription' | 'noCapex' | 'totalBudget' | 'used' | 'remaining' | 'percentage';
+type SortDirection = 'asc' | 'desc' | null;
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("id-ID", {
@@ -86,6 +90,63 @@ export default function BudgetUsageTableCapex({
   onRefresh,
   onViewDetails,
 }: Props) {
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  // Sorting handler
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Cycle through: asc -> desc -> null
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortDirection(null);
+        setSortField(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sort data
+  const sortedData = [...data].sort((a, b) => {
+    if (!sortField || !sortDirection) return 0;
+
+    let aVal: any = a[sortField];
+    let bVal: any = b[sortField];
+
+    // Handle null values for noCapex
+    if (sortField === 'noCapex') {
+      if (aVal === null && bVal === null) return 0;
+      if (aVal === null) return sortDirection === 'asc' ? 1 : -1;
+      if (bVal === null) return sortDirection === 'asc' ? -1 : 1;
+    }
+
+    // For string comparison
+    if (typeof aVal === 'string' && typeof bVal === 'string') {
+      aVal = aVal.toLowerCase();
+      bVal = bVal.toLowerCase();
+    }
+
+    if (sortDirection === 'asc') {
+      return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+    } else {
+      return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+    }
+  });
+
+  // Render sort icon
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />;
+    }
+    if (sortDirection === 'asc') {
+      return <ArrowUp className="w-3.5 h-3.5 text-blue-600" />;
+    }
+    return <ArrowDown className="w-3.5 h-3.5 text-blue-600" />;
+  };
+
   const summary = {
     totalBudget: data.reduce((acc, item) => acc + item.totalBudget, 0),
     totalUsed: data.reduce((acc, item) => acc + item.used, 0),
@@ -129,29 +190,77 @@ export default function BudgetUsageTableCapex({
         <table className="w-full border-collapse">
           <thead className="bg-slate-50 sticky top-0 z-10">
             <tr className="border-b-2 border-gray-200">
-              <th className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200">
-                Budget ID
+              <th 
+                className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                onClick={() => handleSort('budgetId')}
+              >
+                <div className="flex items-center gap-2">
+                  <span>Budget ID</span>
+                  {renderSortIcon('budgetId')}
+                </div>
               </th>
-              <th className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200">
-                Item Code
+              <th 
+                className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                onClick={() => handleSort('itemCode')}
+              >
+                <div className="flex items-center gap-2">
+                  <span>Item Code</span>
+                  {renderSortIcon('itemCode')}
+                </div>
               </th>
-              <th className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200">
-                Item Description
+              <th 
+                className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                onClick={() => handleSort('itemDescription')}
+              >
+                <div className="flex items-center gap-2">
+                  <span>Item Description</span>
+                  {renderSortIcon('itemDescription')}
+                </div>
               </th>
-              <th className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200">
-                No CAPEX
+              <th 
+                className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                onClick={() => handleSort('noCapex')}
+              >
+                <div className="flex items-center gap-2">
+                  <span>No CAPEX</span>
+                  {renderSortIcon('noCapex')}
+                </div>
               </th>
-              <th className="px-5 py-4 text-right text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200">
-                Total Budget
+              <th 
+                className="px-5 py-4 text-right text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                onClick={() => handleSort('totalBudget')}
+              >
+                <div className="flex items-center justify-end gap-2">
+                  <span>Total Budget</span>
+                  {renderSortIcon('totalBudget')}
+                </div>
               </th>
-              <th className="px-5 py-4 text-right text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200">
-                Realisasi
+              <th 
+                className="px-5 py-4 text-right text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                onClick={() => handleSort('used')}
+              >
+                <div className="flex items-center justify-end gap-2">
+                  <span>Realisasi</span>
+                  {renderSortIcon('used')}
+                </div>
               </th>
-              <th className="px-5 py-4 text-right text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200">
-                Remaining
+              <th 
+                className="px-5 py-4 text-right text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                onClick={() => handleSort('remaining')}
+              >
+                <div className="flex items-center justify-end gap-2">
+                  <span>Remaining</span>
+                  {renderSortIcon('remaining')}
+                </div>
               </th>
-              <th className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200">
-                Progress
+              <th 
+                className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                onClick={() => handleSort('percentage')}
+              >
+                <div className="flex items-center gap-2">
+                  <span>Progress</span>
+                  {renderSortIcon('percentage')}
+                </div>
               </th>
               <th className="px-5 py-4 text-center text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200">
                 Status
@@ -183,7 +292,7 @@ export default function BudgetUsageTableCapex({
             )}
 
             {!loading &&
-              data.map((item, index) => {
+              sortedData.map((item, index) => {
                 const progressWidth = Math.min(item.percentage, 100);
                 
                 return (
