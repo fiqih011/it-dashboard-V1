@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     const transactionId = searchParams.get("transactionDisplayId") ?? undefined; // ✅ FIX
     const budgetId = searchParams.get("budgetPlanDisplayId") ?? undefined;       // ✅ FIX
     const vendor = searchParams.get("vendor") ?? undefined;
-    const requester = searchParams.get("requester") ?? undefined;
+    const coa = searchParams.get("coa") ?? undefined;
     const description = searchParams.get("description") ?? undefined;
 
     // =========================
@@ -56,9 +56,9 @@ export async function GET(req: NextRequest) {
           mode: Prisma.QueryMode.insensitive,
         },
       }),
-      ...(requester && {
-        requester: {
-          contains: requester,
+      ...(coa && {
+        coa: {
+          contains: coa,
           mode: Prisma.QueryMode.insensitive,
         },
       }),
@@ -164,13 +164,9 @@ export async function POST(req: NextRequest) {
 
     const amount = BigInt(body.amount);
 
-    // 2️⃣ Cek apakah budget mencukupi
-    if (budgetPlan.budgetRemainingAmount < amount) {
-      return NextResponse.json(
-        { error: "Budget tidak mencukupi" },
-        { status: 400 }
-      );
-    }
+    // ✅ OPEX: Allow over budget (budget bisa minus)
+    // User tetap bisa input transaksi meskipun budget habis
+    // Remaining akan otomatis jadi minus, dashboard akan show "Over Budget"
 
     // 3️⃣ Generate display ID (TRX-OP-YY-XXXX)
     const year = new Date().getFullYear().toString().slice(-2);

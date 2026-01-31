@@ -58,6 +58,6 @@ export type TransactionFilterValue = {
   transactionDisplayId?: string;
   budgetPlanDisplayId?: string;
   vendor?: string;
-  requester?: string;
+  coa?: string;
   description?: string;
 };

@@ -53,15 +53,15 @@ export default function TransactionsOpexPage() {
     transactionIds: FilterOption[];
     budgetPlanIds: FilterOption[];
     vendors: FilterOption[];
-    requesters: FilterOption[];
-    descriptions: FilterOption[]; // ✅ TAMBAH DESCRIPTIONS
+    coas: FilterOption[];
+    descriptions: FilterOption[];
   }>({
     years: [],
     transactionIds: [],
     budgetPlanIds: [],
     vendors: [],
-    requesters: [],
-    descriptions: [], // ✅ TAMBAH DESCRIPTIONS
+    coas: [],
+    descriptions: [],
   });
 
   // =========================
@@ -128,8 +128,8 @@ export default function TransactionsOpexPage() {
           transactionIds: toOptions(data.map((r) => r.displayId)),
           budgetPlanIds: toOptions(data.map((r) => r.budgetPlanDisplayId)),
           vendors: toOptions(data.map((r) => r.vendor)),
-          requesters: toOptions(data.map((r) => r.requester)),
-          descriptions: toOptions(data.map((r) => r.description)), // ✅ TAMBAH DESCRIPTIONS
+          coas: toOptions(data.map((r) => r.coa)),
+          descriptions: toOptions(data.map((r) => r.description)),
         });
       }
     } catch (err) {
@@ -175,11 +175,11 @@ export default function TransactionsOpexPage() {
         case "vendor":
           return { ...field, options: stableOptions.vendors };
 
-        case "requester":
-          return { ...field, options: stableOptions.requesters };
+        case "coa":
+          return { ...field, options: stableOptions.coas };
 
         case "description":
-          return { ...field, options: stableOptions.descriptions }; // ✅ TAMBAH DESCRIPTIONS
+          return { ...field, options: stableOptions.descriptions };
 
         default:
           return field;
