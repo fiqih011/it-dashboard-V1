@@ -73,6 +73,7 @@ export default function EditTransactionCapexPage() {
           deliveryStatus: trx.deliveryStatus ?? "",
 
           opexCapex: "CAPEX",
+          oc: trx.oc ?? "", // ✅ ONLY THIS LINE ADDED
           ccLob: trx.ccLob ?? "",
 
           status: trx.status ?? "",

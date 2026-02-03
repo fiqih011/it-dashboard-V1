@@ -58,6 +58,7 @@ export type TransactionFilterValue = {
   transactionDisplayId?: string;
   budgetPlanDisplayId?: string;
   vendor?: string;
+  requester?: string; // ✅ ONLY THIS LINE ADDED
   coa?: string;
   description?: string;
 };
