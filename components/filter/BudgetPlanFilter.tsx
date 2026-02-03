@@ -27,10 +27,9 @@ export default function BudgetPlanFilter({
 }: Props) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
-      {/* FILTER GRID — SAMA DENGAN CAPEX */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-        {/* ROW 1 */}
-        <div className="md:col-span-2">
+      {/* ✅ FILTER GRID - 1 BARIS (5 KOLOM) */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
             Tahun
           </label>
@@ -42,7 +41,7 @@ export default function BudgetPlanFilter({
           />
         </div>
 
-        <div className="md:col-span-2">
+        <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
             Budget ID
           </label>
@@ -56,7 +55,7 @@ export default function BudgetPlanFilter({
           />
         </div>
 
-        <div className="md:col-span-2">
+        <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
             COA
           </label>
@@ -68,8 +67,7 @@ export default function BudgetPlanFilter({
           />
         </div>
 
-        {/* ROW 2 */}
-        <div className="md:col-span-2">
+        <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
             Category
           </label>
@@ -83,7 +81,7 @@ export default function BudgetPlanFilter({
           />
         </div>
 
-        <div className="md:col-span-2">
+        <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
             Component
           </label>

@@ -28,10 +28,9 @@ export default function BudgetPlanCapexFilter({
 }: Props) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
-      {/* FILTER GRID */}
+      {/* ✅ FILTER GRID - 1 BARIS (6 KOLOM) */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-        {/* ROW 1 */}
-        <div className="md:col-span-2">
+        <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
             Tahun
           </label>
@@ -43,7 +42,7 @@ export default function BudgetPlanCapexFilter({
           />
         </div>
 
-        <div className="md:col-span-2">
+        <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
             Budget ID
           </label>
@@ -57,7 +56,7 @@ export default function BudgetPlanCapexFilter({
           />
         </div>
 
-        <div className="md:col-span-2">
+        <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
             Item Code
           </label>
@@ -71,8 +70,7 @@ export default function BudgetPlanCapexFilter({
           />
         </div>
 
-        {/* ROW 2 */}
-        <div className="md:col-span-2">
+        <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
             Item Description
           </label>
@@ -86,7 +84,7 @@ export default function BudgetPlanCapexFilter({
           />
         </div>
 
-        <div className="md:col-span-2">
+        <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
             No CAPEX
           </label>
@@ -100,7 +98,7 @@ export default function BudgetPlanCapexFilter({
           />
         </div>
 
-        <div className="md:col-span-2">
+        <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
             Item Remark
           </label>
