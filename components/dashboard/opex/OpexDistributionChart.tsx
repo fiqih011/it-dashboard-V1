@@ -61,7 +61,7 @@ export default function OpexDistributionChart({
           </h3>
         </div>
         <div className="p-6">
-          <ErrorState />
+          <ErrorState message={error} />
         </div>
       </div>
     );
@@ -89,13 +89,15 @@ export default function OpexDistributionChart({
   }
 
   // =====================================================
-  // FORMAT CURRENCY
+  // HELPERS
   // =====================================================
   const formatCurrency = (value: number): string => {
     if (value >= 1_000_000_000) return `Rp ${(value / 1_000_000_000).toFixed(1)}B`;
     if (value >= 1_000_000) return `Rp ${(value / 1_000_000).toFixed(1)}M`;
     return `Rp ${(value / 1_000).toFixed(0)}K`;
   };
+
+  const categories = data.map((d) => d.budgetId);
 
   // =====================================================
   // CHART OPTIONS — MIXED (BAR + LINE)
@@ -130,7 +132,7 @@ export default function OpexDistributionChart({
       },
     ],
     xaxis: {
-      categories: data.map((d) => d.budgetId),
+      categories,
       labels: {
         style: {
           fontSize: "12px",
@@ -164,10 +166,50 @@ export default function OpexDistributionChart({
       formatter: (_, opts) =>
         `${data[opts.dataPointIndex].percentage.toFixed(1)}%`,
     },
+
+    // =====================================================
+    // 🔥 CUSTOM TOOLTIP — COMPONENT NAME (PROFESSIONAL)
+    // =====================================================
     tooltip: {
       shared: true,
       intersect: false,
+      custom: ({ dataPointIndex }) => {
+        const item = data[dataPointIndex];
+
+        return `
+          <div style="
+            padding: 12px;
+            background: #1f2937;
+            color: white;
+            border-radius: 8px;
+            min-width: 260px;
+          ">
+            <div style="font-weight: 600; font-size: 14px; margin-bottom: 6px;">
+              ${item.component}
+            </div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 10px;">
+              ${item.budgetId}
+            </div>
+
+            <div style="font-size: 13px; line-height: 1.7;">
+              <div style="display:flex;justify-content:space-between;">
+                <span>Realisasi</span>
+                <strong>${formatCurrency(item.realisasi)}</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;">
+                <span>Total Budget</span>
+                <span>${formatCurrency(item.totalBudget)}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:6px;border-top:1px solid #374151;padding-top:6px;">
+                <span>Usage</span>
+                <strong>${item.percentage.toFixed(1)}%</strong>
+              </div>
+            </div>
+          </div>
+        `;
+      },
     },
+
     legend: {
       position: "top",
       horizontalAlign: "right",
@@ -189,7 +231,11 @@ export default function OpexDistributionChart({
       </div>
 
       <div className="p-6">
-        <ApexChart options={options} series={options.series!} height={450} />
+        <ApexChart
+          options={options}
+          series={options.series!}
+          height={450}
+        />
       </div>
     </div>
   );
