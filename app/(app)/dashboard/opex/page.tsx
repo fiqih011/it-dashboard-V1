@@ -1,168 +1,390 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { DollarSign, TrendingUp, CheckCircle, ArrowLeft } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import SummaryCard from "@/components/ui/SummaryCard";
 import StatusLegend from "@/components/ui/StatusLegend";
 import BudgetUsageTable from "@/components/dashboard/BudgetUsageTable";
 import TransactionDetailModal from "@/components/modal/TransactionDetailModal";
 import type { BudgetUsageItem } from "@/components/dashboard/BudgetUsageTable";
 
-interface Summary {
-  totalBudget: number;
-  totalRealisasi: number;
-  remaining: number;
-}
+import DashboardOpexFilter from "@/components/filter/dashboard/DashboardOpexFilter";
+import OpexGlobalSummary from "@/components/dashboard/opex/OpexGlobalSummary";
+import OpexCoaSummary from "@/components/dashboard/opex/OpexCoaSummary";
+import OpexDistributionChart, {
+  DistributionChartData,
+} from "@/components/dashboard/opex/OpexDistributionChart";
+
+import type {
+  DashboardOpexFilterValue,
+  DashboardFilterOptions,
+  DashboardGlobalSummary,
+  DashboardCoaSummary,
+} from "@/types/dashboard";
 
 export default function DashboardOpexPage() {
   const router = useRouter();
-  const [budgetData, setBudgetData] = useState<BudgetUsageItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<Summary>({
-    totalBudget: 0,
-    totalRealisasi: 0,
-    remaining: 0,
+  const currentYear = new Date().getFullYear().toString();
+
+  // =====================================================
+  // FILTER STATE
+  // =====================================================
+  const [filterDraft, setFilterDraft] = useState<DashboardOpexFilterValue>({
+    year: "",
+    budgetId: "",
+    coa: "",
+    category: "",
+    component: "",
   });
 
-  // ✅ Modal state
+  const [filterApplied, setFilterApplied] =
+    useState<DashboardOpexFilterValue>(filterDraft);
+
+  const [filterOptions, setFilterOptions] = useState<DashboardFilterOptions>({
+    years: [],
+    budgetIds: [],
+    coas: [],
+    categories: [],
+    components: [],
+  });
+
+  // =====================================================
+  // DATA STATE
+  // =====================================================
+  const [globalSummary, setGlobalSummary] =
+    useState<DashboardGlobalSummary | null>(null);
+
+  const [coaSummary, setCoaSummary] =
+    useState<DashboardCoaSummary | null>(null);
+
+  // ✅ FIX: distribution SELALU array
+  const [distribution, setDistribution] =
+    useState<DistributionChartData[]>([]);
+
+  const [budgetData, setBudgetData] = useState<BudgetUsageItem[]>([]);
+
+  // =====================================================
+  // LOADING / ERROR
+  // =====================================================
+  const [loadingGlobal, setLoadingGlobal] = useState(true);
+  const [loadingCoa, setLoadingCoa] = useState(false);
+  const [loadingDistribution, setLoadingDistribution] = useState(false);
+  const [loadingTable, setLoadingTable] = useState(true);
+
+  const [errorGlobal, setErrorGlobal] = useState<string | null>(null);
+  const [errorCoa, setErrorCoa] = useState<string | null>(null);
+  const [errorDistribution, setErrorDistribution] =
+    useState<string | null>(null);
+  const [errorTable, setErrorTable] = useState<string | null>(null);
+
+  // =====================================================
+  // MODAL
+  // =====================================================
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedBudgetId, setSelectedBudgetId] = useState<string>("");
 
+  // =====================================================
+  // INITIAL LOAD
+  // =====================================================
   useEffect(() => {
-    fetchDashboardData();
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    setError(null);
+  const init = async () => {
+    await fetchAvailableYears();
 
+    setFilterDraft((prev) => ({ ...prev, year: currentYear }));
+    setFilterApplied((prev) => ({ ...prev, year: currentYear }));
+
+    await rebuildFilterOptionsByYear(currentYear);
+    fetchGlobalSummary(currentYear);
+    fetchTableData({
+      year: currentYear,
+      budgetId: "",
+      coa: "",
+      category: "",
+      component: "",
+    });
+  };
+
+  // =====================================================
+  // FETCH AVAILABLE YEARS
+  // =====================================================
+  const fetchAvailableYears = async () => {
     try {
-      const response = await fetch("/api/dashboard/opex");
+      const res = await fetch("/api/dashboard/opex/years");
+      if (!res.ok) throw new Error();
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch data");
-      }
+      const years: number[] = await res.json();
 
-      const data: BudgetUsageItem[] = await response.json();
-      setBudgetData(data);
-
-      // Calculate summary
-      const total = data.reduce((acc, item) => acc + item.totalBudget, 0);
-      const used = data.reduce((acc, item) => acc + item.used, 0);
-      const remaining = data.reduce((acc, item) => acc + item.remaining, 0);
-
-      setSummary({
-        totalBudget: total,
-        totalRealisasi: used,
-        remaining: remaining,
-      });
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setError("Gagal mengambil data dashboard");
-    } finally {
-      setLoading(false);
+      setFilterOptions((prev) => ({
+        ...prev,
+        years: years.map(String),
+      }));
+    } catch {
+      const y = new Date().getFullYear();
+      const fallback = Array.from({ length: 5 }, (_, i) => String(y - i));
+      setFilterOptions((prev) => ({ ...prev, years: fallback }));
     }
   };
 
-  const formatCurrency = (value: number): string => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(value);
+  // =====================================================
+  // REBUILD FILTER OPTIONS BY YEAR
+  // =====================================================
+  const rebuildFilterOptionsByYear = async (year: string) => {
+    try {
+      const res = await fetch(
+        `/api/dashboard/opex/tabel-budget?year=${year}`
+      );
+      if (!res.ok) throw new Error();
+
+      const data: BudgetUsageItem[] = await res.json();
+
+      setFilterOptions((prev) => ({
+        ...prev,
+        budgetIds: [...new Set(data.map((d) => d.budgetId))].sort(),
+        coas: [...new Set(data.map((d) => d.coa))].sort(),
+        categories: [...new Set(data.map((d) => d.name))].sort(),
+        components: [...new Set(data.map((d) => d.name))].sort(),
+      }));
+    } catch {
+      // silent
+    }
   };
 
-  const usagePercentage =
-    summary.totalBudget > 0
-      ? ((summary.totalRealisasi / summary.totalBudget) * 100).toFixed(1)
-      : "0.0";
+  // =====================================================
+  // FETCH GLOBAL SUMMARY
+  // =====================================================
+  const fetchGlobalSummary = async (year: string) => {
+    setLoadingGlobal(true);
+    setErrorGlobal(null);
 
-  // ✅ Handle view details
-  const handleViewDetails = (budgetInternalId: string) => {
-    setSelectedBudgetId(budgetInternalId);
+    try {
+      const res = await fetch(
+        `/api/dashboard/opex/summary?year=${year}`
+      );
+      if (!res.ok) throw new Error();
+
+      const data: DashboardGlobalSummary = await res.json();
+      setGlobalSummary(data);
+    } catch {
+      setErrorGlobal("Gagal mengambil global summary");
+    } finally {
+      setLoadingGlobal(false);
+    }
+  };
+
+  // =====================================================
+  // FETCH COA SUMMARY
+  // =====================================================
+  const fetchCoaSummary = async (coa: string, year: string) => {
+    setLoadingCoa(true);
+    setErrorCoa(null);
+
+    try {
+      const res = await fetch(
+        `/api/dashboard/opex/coa-summary?coa=${coa}&year=${year}`
+      );
+
+      if (!res.ok) {
+        if (res.status === 404) {
+          setCoaSummary(null);
+          return;
+        }
+        throw new Error();
+      }
+
+      const data: DashboardCoaSummary = await res.json();
+      setCoaSummary(data);
+    } catch {
+      setErrorCoa("Gagal mengambil COA summary");
+    } finally {
+      setLoadingCoa(false);
+    }
+  };
+
+  // =====================================================
+  // FETCH DISTRIBUTION
+  // =====================================================
+  const fetchDistribution = async (coa: string, year: string) => {
+    setLoadingDistribution(true);
+    setErrorDistribution(null);
+
+    try {
+      const res = await fetch(
+        `/api/dashboard/opex/coa-distribution?coa=${coa}&year=${year}&limit=10`
+      );
+      if (!res.ok) throw new Error();
+
+      const data: DistributionChartData[] = await res.json();
+      setDistribution(data);
+    } catch {
+      setErrorDistribution("Gagal mengambil distribution data");
+      setDistribution([]);
+    } finally {
+      setLoadingDistribution(false);
+    }
+  };
+
+  // =====================================================
+  // FETCH TABLE DATA
+  // =====================================================
+  const fetchTableData = async (filters: DashboardOpexFilterValue) => {
+    setLoadingTable(true);
+    setErrorTable(null);
+
+    try {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v) params.append(k, v);
+      });
+
+      const res = await fetch(
+        `/api/dashboard/opex/tabel-budget?${params.toString()}`
+      );
+      if (!res.ok) throw new Error();
+
+      const data: BudgetUsageItem[] = await res.json();
+      setBudgetData(data);
+    } catch {
+      setErrorTable("Gagal mengambil data tabel");
+    } finally {
+      setLoadingTable(false);
+    }
+  };
+
+  // =====================================================
+  // HANDLERS
+  // =====================================================
+  const handleFilterChange = async (next: DashboardOpexFilterValue) => {
+    if (next.year !== filterDraft.year && next.year) {
+      const reset: DashboardOpexFilterValue = {
+        year: next.year,
+        budgetId: "",
+        coa: "",
+        category: "",
+        component: "",
+      };
+
+      setFilterDraft(reset);
+      await rebuildFilterOptionsByYear(next.year);
+    } else {
+      setFilterDraft(next);
+    }
+  };
+
+  const handleSearch = () => {
+    const year = filterDraft.year || currentYear;
+
+    setFilterApplied({ ...filterDraft, year });
+    fetchGlobalSummary(year);
+    fetchTableData({ ...filterDraft, year });
+
+    if (filterDraft.coa) {
+      fetchCoaSummary(filterDraft.coa, year);
+      fetchDistribution(filterDraft.coa, year);
+    } else {
+      setCoaSummary(null);
+      setDistribution([]);
+    }
+  };
+
+  const handleReset = async () => {
+    const reset: DashboardOpexFilterValue = {
+      year: currentYear,
+      budgetId: "",
+      coa: "",
+      category: "",
+      component: "",
+    };
+
+    setFilterDraft(reset);
+    setFilterApplied(reset);
+
+    await rebuildFilterOptionsByYear(currentYear);
+    fetchGlobalSummary(currentYear);
+    fetchTableData(reset);
+
+    setCoaSummary(null);
+    setDistribution([]);
+  };
+
+  const handleViewDetails = (id: string) => {
+    setSelectedBudgetId(id);
     setModalOpen(true);
   };
 
-  // ✅ Handle close modal
   const handleCloseModal = () => {
     setModalOpen(false);
     setSelectedBudgetId("");
   };
 
-  if (error) {
-    return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 text-red-800">
-            <span className="font-medium">{error}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleRefreshTable = () => {
+    fetchTableData(filterApplied);
+  };
 
+  // =====================================================
+  // RENDER
+  // =====================================================
   return (
     <div className="space-y-6">
-      {/* Header with Back Button */}
       <div className="mb-2">
         <button
-          onClick={() => router.push('/dashboard')}
-          className="mb-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          onClick={() => router.push("/dashboard")}
+          className="mb-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Dashboard Menu</span>
         </button>
+
         <h1 className="text-3xl font-bold text-gray-800">Dashboard OPEX</h1>
         <p className="text-gray-600 mt-1">
           Ringkasan penggunaan budget operasional
         </p>
       </div>
 
-      {/* Summary Cards - AdminLTE Style */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <SummaryCard
-          icon={<DollarSign className="w-6 h-6" />}
-          title="Total Budget"
-          value={formatCurrency(summary.totalBudget)}
-          badge="100%"
-          color="blue"
-          loading={loading}
-        />
+      <DashboardOpexFilter
+        value={filterDraft}
+        options={filterOptions}
+        onChange={handleFilterChange}
+        onSearch={handleSearch}
+        onReset={handleReset}
+      />
 
-        <SummaryCard
-          icon={<TrendingUp className="w-6 h-6" />}
-          title="Total Realisasi"
-          value={formatCurrency(summary.totalRealisasi)}
-          badge={`${usagePercentage}%`}
-          color="purple"
-          loading={loading}
-        />
+      <OpexGlobalSummary
+        data={globalSummary}
+        loading={loadingGlobal}
+        error={errorGlobal}
+      />
 
-        <SummaryCard
-          icon={<CheckCircle className="w-6 h-6" />}
-          title="Remaining Budget"
-          value={formatCurrency(summary.remaining)}
-          badge={`${(100 - parseFloat(usagePercentage)).toFixed(1)}%`}
-          color="emerald"
-          loading={loading}
+      {filterApplied.coa && (
+        <OpexCoaSummary
+          data={coaSummary}
+          loading={loadingCoa}
+          error={errorCoa}
         />
-      </div>
+      )}
 
-      {/* Budget Usage Table with Action */}
+      {filterApplied.coa && (
+        <OpexDistributionChart
+          data={distribution}
+          coa={filterApplied.coa}
+          loading={loadingDistribution}
+          error={errorDistribution}
+        />
+      )}
+
       <BudgetUsageTable
         data={budgetData}
-        loading={loading}
-        onRefresh={fetchDashboardData}
+        loading={loadingTable}
+        onRefresh={handleRefreshTable}
         onViewDetails={handleViewDetails}
       />
 
-      {/* Status Legend */}
       <StatusLegend />
 
-      {/* Transaction Detail Modal */}
       <TransactionDetailModal
         open={modalOpen}
         budgetId={selectedBudgetId}

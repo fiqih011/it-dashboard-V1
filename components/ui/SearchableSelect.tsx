@@ -17,17 +17,17 @@ export default function SearchableSelect({
   onChange,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState(value ?? "");
+  const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setQuery(value ?? "");
-  }, [value]);
-
+  // =====================================================
+  // CLOSE DROPDOWN ON OUTSIDE CLICK
+  // =====================================================
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
+        setQuery(""); // Reset query when closing
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -35,23 +35,53 @@ export default function SearchableSelect({
       document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // =====================================================
+  // FILTERED OPTIONS (Based on Query)
+  // =====================================================
   const filteredOptions = options.filter((opt) =>
     opt.toLowerCase().includes(query.toLowerCase())
   );
+
+  // =====================================================
+  // DISPLAY VALUE (What to show in input)
+  // =====================================================
+  const displayValue = open ? query : (value ?? "");
+
+  // =====================================================
+  // HANDLE SELECT (User clicks option)
+  // =====================================================
+  const handleSelect = (option: string) => {
+    onChange(option);
+    setQuery("");
+    setOpen(false);
+  };
+
+  // =====================================================
+  // HANDLE QUERY CHANGE (User types to search)
+  // =====================================================
+  const handleQueryChange = (newQuery: string) => {
+    setQuery(newQuery);
+    setOpen(true);
+  };
+
+  // =====================================================
+  // HANDLE OPEN DROPDOWN
+  // =====================================================
+  const handleOpen = () => {
+    setQuery("");
+    setOpen(true);
+  };
 
   return (
     <div ref={ref} className="relative">
       <div
         className="flex items-center border border-gray-300 rounded-md h-9 px-3 bg-white cursor-text"
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
       >
         <input
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            onChange(e.target.value || undefined);
-            setOpen(true);
-          }}
+          value={displayValue}
+          onFocus={handleOpen}
+          onChange={(e) => handleQueryChange(e.target.value)}
           placeholder={placeholder}
           className="flex-1 text-sm outline-none bg-transparent"
         />
@@ -63,11 +93,7 @@ export default function SearchableSelect({
           {filteredOptions.map((opt) => (
             <div
               key={opt}
-              onClick={() => {
-                setQuery(opt);
-                onChange(opt);
-                setOpen(false);
-              }}
+              onClick={() => handleSelect(opt)}
               className="px-3 py-2 text-sm hover:bg-slate-100 cursor-pointer"
             >
               {opt}
