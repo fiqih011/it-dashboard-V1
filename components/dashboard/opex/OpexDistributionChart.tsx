@@ -106,9 +106,9 @@ export default function OpexDistributionChart({
   // 🎨 DYNAMIC COLORS based on usage percentage
   // =====================================================
   const getBarColor = (percentage: number): string => {
-    if (percentage >= 100) return "#EF4444"; // Red - Over Budget
-    if (percentage >= 80) return "#F59E0B";  // Amber - Warning
-    return "#10B981";                         // Green - On Track
+    if (percentage > 100) return "#EF4444";  // Red - OVER 100% (Over Budget)
+    if (percentage >= 80) return "#F59E0B";  // Amber - 80-100% (Warning/On Budget)
+    return "#10B981";                         // Green - <80% (On Track)
   };
 
   // Prepare chart data
@@ -177,10 +177,10 @@ export default function OpexDistributionChart({
         const item = sortedData[dataPointIndex];
         const usageColor = getBarColor(item.percentage);
         const statusText =
-          item.percentage >= 100
+          item.percentage > 100
             ? "🔴 Over Budget"
             : item.percentage >= 80
-            ? "🟡 Warning"
+            ? "🟡 Warning / On Budget"
             : "🟢 On Track";
 
         return `
@@ -283,11 +283,11 @@ export default function OpexDistributionChart({
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-sm bg-amber-500"></div>
-          <span className="text-gray-600">🟡 Warning (80-99%)</span>
+          <span className="text-gray-600">🟡 Warning / On Budget (80-100%)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-sm bg-red-500"></div>
-          <span className="text-gray-600">🔴 Over Budget (≥100%)</span>
+          <span className="text-gray-600">🔴 Over Budget (&gt;100%)</span>
         </div>
       </div>
 

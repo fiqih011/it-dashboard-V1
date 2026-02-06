@@ -11,7 +11,6 @@ import type { BudgetUsageItem } from "@/components/dashboard/BudgetUsageTable";
 
 import DashboardOpexFilter from "@/components/filter/dashboard/DashboardOpexFilter";
 import OpexGlobalSummary from "@/components/dashboard/opex/OpexGlobalSummary";
-// ✅ CHANGED: Import new grid component instead of single chart
 import OpexChartsGrid from "@/components/dashboard/opex/OpexChartsGrid";
 import type { DistributionChartData } from "@/components/dashboard/opex/OpexDistributionChart";
 import type { BudgetStatusData } from "@/components/dashboard/opex/OpexStatusDonutChart";
@@ -54,10 +53,9 @@ export default function DashboardOpexPage() {
   const [globalSummary, setGlobalSummary] =
     useState<DashboardGlobalSummary | null>(null);
 
-  // ✅ CHANGED: Combined chart data (distribution + status)
   const [chartDistribution, setChartDistribution] =
     useState<DistributionChartData[]>([]);
-  
+
   const [chartStatus, setChartStatus] =
     useState<BudgetStatusData | null>(null);
 
@@ -67,11 +65,11 @@ export default function DashboardOpexPage() {
   // LOADING / ERROR
   // =====================================================
   const [loadingGlobal, setLoadingGlobal] = useState(true);
-  const [loadingCharts, setLoadingCharts] = useState(false); // ✅ CHANGED: Combined loading
+  const [loadingCharts, setLoadingCharts] = useState(false);
   const [loadingTable, setLoadingTable] = useState(true);
 
   const [errorGlobal, setErrorGlobal] = useState<string | null>(null);
-  const [errorCharts, setErrorCharts] = useState<string | null>(null); // ✅ CHANGED: Combined error
+  const [errorCharts, setErrorCharts] = useState<string | null>(null);
   const [errorTable, setErrorTable] = useState<string | null>(null);
 
   // =====================================================
@@ -95,7 +93,9 @@ export default function DashboardOpexPage() {
     setFilterApplied((prev) => ({ ...prev, year: currentYear }));
 
     await rebuildFilterOptionsByYear(currentYear);
-    fetchGlobalSummary(currentYear);
+
+    // 🔒 NORMALIZED COA → ""
+    fetchGlobalSummary(currentYear, "");
     fetchTableData({
       year: currentYear,
       budgetId: "",
@@ -151,15 +151,18 @@ export default function DashboardOpexPage() {
   };
 
   // =====================================================
-  // FETCH GLOBAL SUMMARY
+  // FETCH GLOBAL SUMMARY (COA AWARE)
   // =====================================================
-  const fetchGlobalSummary = async (year: string) => {
+  const fetchGlobalSummary = async (year: string, coa: string) => {
     setLoadingGlobal(true);
     setErrorGlobal(null);
 
     try {
+      const params = new URLSearchParams({ year });
+      if (coa) params.append("coa", coa);
+
       const res = await fetch(
-        `/api/dashboard/opex/summary?year=${year}`
+        `/api/dashboard/opex/summary?${params.toString()}`
       );
       if (!res.ok) throw new Error();
 
@@ -173,7 +176,7 @@ export default function DashboardOpexPage() {
   };
 
   // =====================================================
-  // ✅ NEW: FETCH CHARTS DATA (Distribution + Status)
+  // FETCH CHARTS DATA
   // =====================================================
   const fetchChartsData = async (coa: string, year: string) => {
     setLoadingCharts(true);
@@ -254,14 +257,16 @@ export default function DashboardOpexPage() {
 
   const handleSearch = () => {
     const year = filterDraft.year || currentYear;
+    const coa = filterDraft.coa ?? "";
 
     setFilterApplied({ ...filterDraft, year });
-    fetchGlobalSummary(year);
+
+    // 🔒 NORMALIZED COA
+    fetchGlobalSummary(year, coa);
     fetchTableData({ ...filterDraft, year });
 
-    // ✅ CHANGED: Fetch combined charts data
-    if (filterDraft.coa) {
-      fetchChartsData(filterDraft.coa, year);
+    if (coa) {
+      fetchChartsData(coa, year);
     } else {
       setChartDistribution([]);
       setChartStatus(null);
@@ -281,10 +286,11 @@ export default function DashboardOpexPage() {
     setFilterApplied(reset);
 
     await rebuildFilterOptionsByYear(currentYear);
-    fetchGlobalSummary(currentYear);
+
+    // 🔒 RESET = GLOBAL
+    fetchGlobalSummary(currentYear, "");
     fetchTableData(reset);
 
-    // ✅ CHANGED: Reset charts data
     setChartDistribution([]);
     setChartStatus(null);
   };
@@ -337,7 +343,6 @@ export default function DashboardOpexPage() {
         error={errorGlobal}
       />
 
-      {/* ✅ CHANGED: Replace OpexCoaSummary + OpexDistributionChart with OpexChartsGrid */}
       {filterApplied.coa && (
         <OpexChartsGrid
           coa={filterApplied.coa}

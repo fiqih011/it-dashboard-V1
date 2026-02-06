@@ -7,36 +7,24 @@ import type { DashboardGlobalSummary } from "@/types/dashboard";
  * GET - GLOBAL SUMMARY (Dashboard OPEX)
  * =========================================================
  * Endpoint: /api/dashboard/opex/summary
- * 
+ *
  * Query Params:
  * - year (optional) - default: current year
- * 
- * Response:
- * {
- *   year: number,
- *   totalBudget: number,
- *   totalRealisasi: number,
- *   totalRemaining: number,
- *   percentage: number,
- *   count: number
- * }
- * 
- * Purpose:
- * Menampilkan ringkasan total OPEX untuk tahun tertentu
- * Digunakan untuk Global Summary Cards (selalu tampil)
+ * - coa (optional)  - filter by COA
  */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    
+
     // =====================================================
     // Parse Query Params
     // =====================================================
     const yearParam = searchParams.get("year");
+    const coaParam = searchParams.get("coa");
+
     const currentYear = new Date().getFullYear();
     const year = yearParam ? Number(yearParam) : currentYear;
 
-    // Validate year
     if (isNaN(year) || year < 2000 || year > 2100) {
       return NextResponse.json(
         { error: "Invalid year parameter" },
@@ -45,12 +33,24 @@ export async function GET(req: NextRequest) {
     }
 
     // =====================================================
-    // Aggregate Budget Plans untuk tahun tertentu
+    // Build WHERE clause (scope only)
+    // =====================================================
+    const whereClause: {
+      year: number;
+      coa?: string;
+    } = {
+      year,
+    };
+
+    if (coaParam) {
+      whereClause.coa = coaParam;
+    }
+
+    // =====================================================
+    // Aggregate Budget Plans
     // =====================================================
     const budgetPlans = await prisma.budgetPlanOpex.findMany({
-      where: {
-        year: year,
-      },
+      where: whereClause,
       select: {
         budgetPlanAmount: true,
         budgetRealisasiAmount: true,
@@ -73,23 +73,17 @@ export async function GET(req: NextRequest) {
       totalRemaining += plan.budgetRemainingAmount;
     }
 
-    // =====================================================
-    // Calculate Percentage
-    // =====================================================
     const percentage =
       totalBudget > BigInt(0)
         ? Number((totalRealisasi * BigInt(100)) / totalBudget)
         : 0;
 
-    // =====================================================
-    // Build Response
-    // =====================================================
     const response: DashboardGlobalSummary = {
       year,
       totalBudget: Number(totalBudget),
       totalRealisasi: Number(totalRealisasi),
       totalRemaining: Number(totalRemaining),
-      percentage: Math.round(percentage * 10) / 10, // Round to 1 decimal
+      percentage: Math.round(percentage * 10) / 10,
       count,
     };
 

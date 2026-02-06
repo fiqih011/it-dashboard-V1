@@ -88,15 +88,22 @@ export default function OpexStatusDonutChart({
   }
 
   // =====================================================
-  // CHART OPTIONS
+  // CHART DATA & OPTIONS - FIXED!
   // =====================================================
+  // ✅ Define series separately (NOT in options)
+  const series = [data.onTrack, data.warning, data.overBudget];
+  
   const options: ApexOptions = {
     chart: {
       type: "donut",
       height: 320,
     },
-    series: [data.onTrack, data.warning, data.overBudget],
-    labels: ["On Track (<80%)", "Warning (80-99%)", "Over Budget (≥100%)"],
+    // ✅ series NOT here - will be passed as separate prop
+    labels: [
+      "On Track (<80%)",
+      "Warning / On Budget (80-100%)",
+      "Over Budget (>100%)",
+    ],
     colors: ["#10B981", "#F59E0B", "#EF4444"],
     legend: {
       position: "bottom",
@@ -112,8 +119,7 @@ export default function OpexStatusDonutChart({
     },
     dataLabels: {
       enabled: true,
-      formatter: function (val, opts) {
-        // Show count instead of percentage
+      formatter: function (_val, opts) {
         return opts.w.config.series[opts.seriesIndex].toString();
       },
       style: {
@@ -190,7 +196,6 @@ export default function OpexStatusDonutChart({
   // =====================================================
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm h-full flex flex-col">
-      {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200">
         <h3 className="text-base font-semibold text-gray-900">
           Status Budget — COA {coa}
@@ -200,11 +205,11 @@ export default function OpexStatusDonutChart({
         </p>
       </div>
 
-      {/* Chart */}
       <div className="p-6 flex-1">
+        {/* ✅ FIXED: Pass series as separate prop */}
         <ApexChart
           options={options}
-          series={options.series!}
+          series={series}
           type="donut"
           height={320}
         />
@@ -212,7 +217,6 @@ export default function OpexStatusDonutChart({
 
       {/* Stats Summary */}
       <div className="px-6 pb-6 space-y-3">
-        {/* On Track */}
         <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-sm bg-green-500"></div>
@@ -228,11 +232,12 @@ export default function OpexStatusDonutChart({
           </div>
         </div>
 
-        {/* Warning */}
         <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-sm bg-amber-500"></div>
-            <span className="text-sm font-medium text-gray-700">Warning</span>
+            <span className="text-sm font-medium text-gray-700">
+              Warning / On Budget
+            </span>
           </div>
           <div className="text-right">
             <div className="text-lg font-bold text-amber-700">
@@ -242,7 +247,6 @@ export default function OpexStatusDonutChart({
           </div>
         </div>
 
-        {/* Over Budget */}
         <div className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-sm bg-red-500"></div>
@@ -265,8 +269,9 @@ export default function OpexStatusDonutChart({
           <div className="flex items-start gap-2">
             <div className="text-blue-500 text-sm mt-0.5">ℹ️</div>
             <div className="text-xs text-blue-800">
-              <strong>Catatan:</strong> Status otomatis berdasarkan percentage
-              usage. On Track &lt;80%, Warning 80-99%, Over Budget ≥100%.
+              <strong>Catatan:</strong> Status berdasarkan persentase penggunaan
+              budget. On Track &lt;80%, Warning / On Budget 80-100%, Over Budget
+              &gt;100%.
             </div>
           </div>
         </div>

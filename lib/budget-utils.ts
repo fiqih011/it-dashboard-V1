@@ -22,9 +22,9 @@ export function calculatePercentage(
 export function getStatusCategory(
   percentage: number
 ): "onTrack" | "warning" | "overBudget" {
-  if (percentage >= 100) return "overBudget";
-  if (percentage >= 80) return "warning";
-  return "onTrack";
+  if (percentage > 100) return "overBudget"; // ✅ ONLY >100% is over budget
+  if (percentage >= 80) return "warning";     // ✅ 80-100% is warning/on budget
+  return "onTrack";                           // ✅ <80% is on track
 }
 
 /**
