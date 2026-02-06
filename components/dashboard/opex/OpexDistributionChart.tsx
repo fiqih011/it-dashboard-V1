@@ -97,145 +97,212 @@ export default function OpexDistributionChart({
     return `Rp ${(value / 1_000).toFixed(0)}K`;
   };
 
-  const categories = data.map((d) => d.budgetId);
+  // =====================================================
+  // 🔥 SORT DATA: Smallest to Largest
+  // =====================================================
+  const sortedData = [...data].sort((a, b) => a.realisasi - b.realisasi);
 
   // =====================================================
-  // CHART OPTIONS — MIXED (BAR + LINE)
+  // 🎨 DYNAMIC COLORS based on usage percentage
+  // =====================================================
+  const getBarColor = (percentage: number): string => {
+    if (percentage >= 100) return "#EF4444"; // Red - Over Budget
+    if (percentage >= 80) return "#F59E0B";  // Amber - Warning
+    return "#10B981";                         // Green - On Track
+  };
+
+  // Prepare chart data
+  const categories = sortedData.map((d) => d.budgetId);
+  const realisasiData = sortedData.map((d) => d.realisasi);
+  const colors = sortedData.map((d) => getBarColor(d.percentage));
+
+  // =====================================================
+  // CHART OPTIONS — HORIZONTAL BARS (FIXED)
   // =====================================================
   const options: ApexOptions = {
     chart: {
-      type: "line",
-      height: 450,
-      toolbar: { show: false },
+      type: "bar",
+      height: 500,
+      toolbar: {
+        show: false,
+      },
     },
     plotOptions: {
       bar: {
-        columnWidth: "55%",
-        borderRadius: 4,
+        horizontal: true,
+        barHeight: "70%",
+        distributed: true,
       },
     },
-    colors: ["#3B82F6", "#10B981"],
-    stroke: {
-      width: [0, 3],
-      curve: "smooth",
+    colors: colors,
+    dataLabels: {
+      enabled: true,
+      formatter: function (val, opts) {
+        // Show percentage usage - clean and informative
+        return `${sortedData[opts.dataPointIndex].percentage.toFixed(1)}%`;
+      },
+      style: {
+        fontSize: "12px",
+        fontWeight: 700,
+        colors: ["#fff"],
+      },
+      offsetX: 0,
     },
-    series: [
-      {
-        name: "Realisasi",
-        type: "bar",
-        data: data.map((d) => d.realisasi),
-      },
-      {
-        name: "Usage %",
-        type: "line",
-        data: data.map((d) => d.percentage),
-      },
-    ],
     xaxis: {
-      categories,
+      labels: {
+        formatter: function (val) {
+          return formatCurrency(Number(val));
+        },
+        style: {
+          fontSize: "11px",
+          colors: "#6B7280",
+        },
+      },
+      axisBorder: {
+        show: true,
+        color: "#E5E7EB",
+      },
+    },
+    yaxis: {
       labels: {
         style: {
           fontSize: "12px",
+          fontWeight: 500,
+          colors: "#374151",
         },
       },
     },
-    yaxis: [
-      {
-        title: {
-          text: "Realisasi (Rp)",
-        },
-        labels: {
-          formatter: (val) => formatCurrency(Number(val)),
-        },
-      },
-      {
-        opposite: true,
-        title: {
-          text: "Usage (%)",
-        },
-        labels: {
-          formatter: (val) => `${Number(val).toFixed(0)}%`,
-        },
-        min: 0,
-        max: 110,
-      },
-    ],
-    dataLabels: {
-      enabled: true,
-      enabledOnSeries: [1],
-      formatter: (_, opts) =>
-        `${data[opts.dataPointIndex].percentage.toFixed(1)}%`,
-    },
-
-    // =====================================================
-    // 🔥 CUSTOM TOOLTIP — COMPONENT NAME (PROFESSIONAL)
-    // =====================================================
     tooltip: {
-      shared: true,
-      intersect: false,
-      custom: ({ dataPointIndex }) => {
-        const item = data[dataPointIndex];
+      custom: function ({ seriesIndex, dataPointIndex, w }) {
+        const item = sortedData[dataPointIndex];
+        const usageColor = getBarColor(item.percentage);
+        const statusText =
+          item.percentage >= 100
+            ? "🔴 Over Budget"
+            : item.percentage >= 80
+            ? "🟡 Warning"
+            : "🟢 On Track";
 
         return `
           <div style="
-            padding: 12px;
+            padding: 16px;
             background: #1f2937;
             color: white;
             border-radius: 8px;
-            min-width: 260px;
+            min-width: 280px;
           ">
-            <div style="font-weight: 600; font-size: 14px; margin-bottom: 6px;">
+            <div style="font-weight: 700; font-size: 14px; margin-bottom: 6px;">
               ${item.component}
             </div>
-            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 10px;">
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #374151;">
               ${item.budgetId}
             </div>
-
-            <div style="font-size: 13px; line-height: 1.7;">
-              <div style="display:flex;justify-content:space-between;">
-                <span>Realisasi</span>
-                <strong>${formatCurrency(item.realisasi)}</strong>
+            <div style="font-size: 13px; line-height: 1.8;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <span style="color:#9ca3af;">Total Budget</span>
+                <span style="font-weight: 600;">${formatCurrency(item.totalBudget)}</span>
               </div>
-              <div style="display:flex;justify-content:space-between;">
-                <span>Total Budget</span>
-                <span>${formatCurrency(item.totalBudget)}</span>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <span style="color:#9ca3af;">Realisasi</span>
+                <strong style="color:${usageColor};">${formatCurrency(item.realisasi)}</strong>
               </div>
-              <div style="display:flex;justify-content:space-between;margin-top:6px;border-top:1px solid #374151;padding-top:6px;">
-                <span>Usage</span>
-                <strong>${item.percentage.toFixed(1)}%</strong>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <span style="color:#9ca3af;">Sisa Budget</span>
+                <span style="font-weight: 600;">${formatCurrency(item.totalBudget - item.realisasi)}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid #374151;">
+                <span style="color:#9ca3af;">Usage</span>
+                <strong style="color:${usageColor};font-size:15px;font-weight:700;">${item.percentage.toFixed(1)}%</strong>
+              </div>
+              <div style="
+                margin-top:12px;
+                padding:8px 12px;
+                background:rgba(${
+                  item.percentage >= 100
+                    ? "239, 68, 68"
+                    : item.percentage >= 80
+                    ? "245, 158, 11"
+                    : "16, 185, 129"
+                }, 0.25);
+                border-radius:6px;
+                text-align:center;
+              ">
+                <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;">
+                  ${statusText}
+                </span>
               </div>
             </div>
           </div>
         `;
       },
     },
-
     legend: {
-      position: "top",
-      horizontalAlign: "right",
+      show: false,
+    },
+    grid: {
+      borderColor: "#e5e7eb",
+      strokeDashArray: 3,
     },
   };
+
+  const series = [
+    {
+      name: "Realisasi",
+      data: sortedData.map((item) => ({
+        x: item.budgetId,  // Budget ID as category
+        y: item.realisasi, // Value
+      })),
+    },
+  ];
 
   // =====================================================
   // RENDER
   // =====================================================
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+      {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200">
         <h3 className="text-base font-semibold text-gray-900">
           Distribusi Pemakaian Budget — COA {coa}
         </h3>
         <p className="text-sm text-gray-500 mt-1">
-          Top {data.length} komponen dengan pemakaian terbesar
+          {sortedData.length} komponen diurutkan dari terkecil ke terbesar
         </p>
       </div>
 
+      {/* Chart */}
       <div className="p-6">
-        <ApexChart
-          options={options}
-          series={options.series!}
-          height={450}
-        />
+        <ApexChart options={options} series={series} type="bar" height={500} />
+      </div>
+
+      {/* Status Legend */}
+      <div className="px-6 pb-4 flex items-center gap-6 text-xs flex-wrap">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-sm bg-green-500"></div>
+          <span className="text-gray-600">🟢 On Track (&lt;80%)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-sm bg-amber-500"></div>
+          <span className="text-gray-600">🟡 Warning (80-99%)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-sm bg-red-500"></div>
+          <span className="text-gray-600">🔴 Over Budget (≥100%)</span>
+        </div>
+      </div>
+
+      {/* Info Note */}
+      <div className="px-6 pb-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="flex items-start gap-2">
+            <div className="text-blue-500 text-sm mt-0.5">ℹ️</div>
+            <div className="text-xs text-blue-800">
+              <strong>Catatan:</strong> Chart menampilkan semua komponen dalam COA ini, diurutkan dari realisasi terkecil
+              ke terbesar (bawah ke atas). Warna bar menunjukkan status budget
+              secara otomatis. Hover pada bar untuk melihat detail lengkap.
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

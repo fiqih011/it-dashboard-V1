@@ -11,16 +11,15 @@ import type { BudgetUsageItem } from "@/components/dashboard/BudgetUsageTable";
 
 import DashboardOpexFilter from "@/components/filter/dashboard/DashboardOpexFilter";
 import OpexGlobalSummary from "@/components/dashboard/opex/OpexGlobalSummary";
-import OpexCoaSummary from "@/components/dashboard/opex/OpexCoaSummary";
-import OpexDistributionChart, {
-  DistributionChartData,
-} from "@/components/dashboard/opex/OpexDistributionChart";
+// ✅ CHANGED: Import new grid component instead of single chart
+import OpexChartsGrid from "@/components/dashboard/opex/OpexChartsGrid";
+import type { DistributionChartData } from "@/components/dashboard/opex/OpexDistributionChart";
+import type { BudgetStatusData } from "@/components/dashboard/opex/OpexStatusDonutChart";
 
 import type {
   DashboardOpexFilterValue,
   DashboardFilterOptions,
   DashboardGlobalSummary,
-  DashboardCoaSummary,
 } from "@/types/dashboard";
 
 export default function DashboardOpexPage() {
@@ -55,12 +54,12 @@ export default function DashboardOpexPage() {
   const [globalSummary, setGlobalSummary] =
     useState<DashboardGlobalSummary | null>(null);
 
-  const [coaSummary, setCoaSummary] =
-    useState<DashboardCoaSummary | null>(null);
-
-  // ✅ FIX: distribution SELALU array
-  const [distribution, setDistribution] =
+  // ✅ CHANGED: Combined chart data (distribution + status)
+  const [chartDistribution, setChartDistribution] =
     useState<DistributionChartData[]>([]);
+  
+  const [chartStatus, setChartStatus] =
+    useState<BudgetStatusData | null>(null);
 
   const [budgetData, setBudgetData] = useState<BudgetUsageItem[]>([]);
 
@@ -68,14 +67,11 @@ export default function DashboardOpexPage() {
   // LOADING / ERROR
   // =====================================================
   const [loadingGlobal, setLoadingGlobal] = useState(true);
-  const [loadingCoa, setLoadingCoa] = useState(false);
-  const [loadingDistribution, setLoadingDistribution] = useState(false);
+  const [loadingCharts, setLoadingCharts] = useState(false); // ✅ CHANGED: Combined loading
   const [loadingTable, setLoadingTable] = useState(true);
 
   const [errorGlobal, setErrorGlobal] = useState<string | null>(null);
-  const [errorCoa, setErrorCoa] = useState<string | null>(null);
-  const [errorDistribution, setErrorDistribution] =
-    useState<string | null>(null);
+  const [errorCharts, setErrorCharts] = useState<string | null>(null); // ✅ CHANGED: Combined error
   const [errorTable, setErrorTable] = useState<string | null>(null);
 
   // =====================================================
@@ -177,54 +173,35 @@ export default function DashboardOpexPage() {
   };
 
   // =====================================================
-  // FETCH COA SUMMARY
+  // ✅ NEW: FETCH CHARTS DATA (Distribution + Status)
   // =====================================================
-  const fetchCoaSummary = async (coa: string, year: string) => {
-    setLoadingCoa(true);
-    setErrorCoa(null);
+  const fetchChartsData = async (coa: string, year: string) => {
+    setLoadingCharts(true);
+    setErrorCharts(null);
 
     try {
       const res = await fetch(
-        `/api/dashboard/opex/coa-summary?coa=${coa}&year=${year}`
+        `/api/dashboard/opex/charts/${coa}?year=${year}`
       );
 
       if (!res.ok) {
         if (res.status === 404) {
-          setCoaSummary(null);
+          setChartDistribution([]);
+          setChartStatus(null);
           return;
         }
         throw new Error();
       }
 
-      const data: DashboardCoaSummary = await res.json();
-      setCoaSummary(data);
+      const data = await res.json();
+      setChartDistribution(data.distributionData || []);
+      setChartStatus(data.statusData || null);
     } catch {
-      setErrorCoa("Gagal mengambil COA summary");
+      setErrorCharts("Gagal mengambil data charts");
+      setChartDistribution([]);
+      setChartStatus(null);
     } finally {
-      setLoadingCoa(false);
-    }
-  };
-
-  // =====================================================
-  // FETCH DISTRIBUTION
-  // =====================================================
-  const fetchDistribution = async (coa: string, year: string) => {
-    setLoadingDistribution(true);
-    setErrorDistribution(null);
-
-    try {
-      const res = await fetch(
-        `/api/dashboard/opex/coa-distribution?coa=${coa}&year=${year}&limit=10`
-      );
-      if (!res.ok) throw new Error();
-
-      const data: DistributionChartData[] = await res.json();
-      setDistribution(data);
-    } catch {
-      setErrorDistribution("Gagal mengambil distribution data");
-      setDistribution([]);
-    } finally {
-      setLoadingDistribution(false);
+      setLoadingCharts(false);
     }
   };
 
@@ -282,12 +259,12 @@ export default function DashboardOpexPage() {
     fetchGlobalSummary(year);
     fetchTableData({ ...filterDraft, year });
 
+    // ✅ CHANGED: Fetch combined charts data
     if (filterDraft.coa) {
-      fetchCoaSummary(filterDraft.coa, year);
-      fetchDistribution(filterDraft.coa, year);
+      fetchChartsData(filterDraft.coa, year);
     } else {
-      setCoaSummary(null);
-      setDistribution([]);
+      setChartDistribution([]);
+      setChartStatus(null);
     }
   };
 
@@ -307,8 +284,9 @@ export default function DashboardOpexPage() {
     fetchGlobalSummary(currentYear);
     fetchTableData(reset);
 
-    setCoaSummary(null);
-    setDistribution([]);
+    // ✅ CHANGED: Reset charts data
+    setChartDistribution([]);
+    setChartStatus(null);
   };
 
   const handleViewDetails = (id: string) => {
@@ -359,20 +337,14 @@ export default function DashboardOpexPage() {
         error={errorGlobal}
       />
 
+      {/* ✅ CHANGED: Replace OpexCoaSummary + OpexDistributionChart with OpexChartsGrid */}
       {filterApplied.coa && (
-        <OpexCoaSummary
-          data={coaSummary}
-          loading={loadingCoa}
-          error={errorCoa}
-        />
-      )}
-
-      {filterApplied.coa && (
-        <OpexDistributionChart
-          data={distribution}
+        <OpexChartsGrid
           coa={filterApplied.coa}
-          loading={loadingDistribution}
-          error={errorDistribution}
+          distributionData={chartDistribution}
+          statusData={chartStatus}
+          loading={loadingCharts}
+          error={errorCharts}
         />
       )}
 
