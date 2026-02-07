@@ -9,7 +9,8 @@ export type BudgetUsageItemCapex = {
   budgetInternalId: string; // ✅ ID internal untuk API call
   itemCode: string;
   itemDescription: string;
-  noCapex: string | null;
+  noCapex: string;
+  itemRemark: string;
   totalBudget: number;
   used: number;
   remaining: number;
@@ -20,7 +21,7 @@ type Props = {
   data: BudgetUsageItemCapex[];
   loading?: boolean;
   onRefresh?: () => void;
-  onViewDetails?: (budgetInternalId: string) => void;
+  onViewDetails?: (budgetInternalId: string) => void; // ✅ Callback untuk view details
 };
 
 type SortField = 'budgetId' | 'itemCode' | 'itemDescription' | 'noCapex' | 'totalBudget' | 'used' | 'remaining' | 'percentage';
@@ -115,13 +116,6 @@ export default function BudgetUsageTableCapex({
 
     let aVal: any = a[sortField];
     let bVal: any = b[sortField];
-
-    // Handle null values for noCapex
-    if (sortField === 'noCapex') {
-      if (aVal === null && bVal === null) return 0;
-      if (aVal === null) return sortDirection === 'asc' ? 1 : -1;
-      if (bVal === null) return sortDirection === 'asc' ? -1 : 1;
-    }
 
     // For string comparison
     if (typeof aVal === 'string' && typeof bVal === 'string') {
@@ -313,7 +307,7 @@ export default function BudgetUsageTableCapex({
 
                     {/* ITEM CODE */}
                     <td className="px-5 py-4 border-r border-gray-200">
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-semibold text-gray-900 font-mono">
                         {item.itemCode}
                       </span>
                     </td>
@@ -327,8 +321,8 @@ export default function BudgetUsageTableCapex({
 
                     {/* NO CAPEX */}
                     <td className="px-5 py-4 border-r border-gray-200">
-                      <span className="text-sm text-gray-600">
-                        {item.noCapex || "-"}
+                      <span className="text-xs font-medium text-gray-700 font-mono">
+                        {item.noCapex}
                       </span>
                     </td>
 

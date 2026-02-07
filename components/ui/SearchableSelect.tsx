@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 
 type Props = {
   value?: string;
@@ -20,80 +20,72 @@ export default function SearchableSelect({
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
-  // =====================================================
-  // CLOSE DROPDOWN ON OUTSIDE CLICK
-  // =====================================================
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
-        setQuery(""); // Reset query when closing
+        setQuery("");
       }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () =>
-      document.removeEventListener("mousedown", handleClickOutside);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // =====================================================
-  // FILTERED OPTIONS (Based on Query)
-  // =====================================================
-  const filteredOptions = options.filter((opt) =>
-    opt.toLowerCase().includes(query.toLowerCase())
+  const filtered = options.filter((o) =>
+    o.toLowerCase().includes(query.toLowerCase())
   );
 
-  // =====================================================
-  // DISPLAY VALUE (What to show in input)
-  // =====================================================
-  const displayValue = open ? query : (value ?? "");
+  const displayValue = open ? query : value ?? "";
 
-  // =====================================================
-  // HANDLE SELECT (User clicks option)
-  // =====================================================
-  const handleSelect = (option: string) => {
-    onChange(option);
+  // ✅ Clear handler for X button
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange(undefined);
     setQuery("");
     setOpen(false);
-  };
-
-  // =====================================================
-  // HANDLE QUERY CHANGE (User types to search)
-  // =====================================================
-  const handleQueryChange = (newQuery: string) => {
-    setQuery(newQuery);
-    setOpen(true);
-  };
-
-  // =====================================================
-  // HANDLE OPEN DROPDOWN
-  // =====================================================
-  const handleOpen = () => {
-    setQuery("");
-    setOpen(true);
   };
 
   return (
     <div ref={ref} className="relative">
       <div
         className="flex items-center border border-gray-300 rounded-md h-9 px-3 bg-white cursor-text"
-        onClick={handleOpen}
+        onClick={() => setOpen(true)}
       >
         <input
           value={displayValue}
-          onFocus={handleOpen}
-          onChange={(e) => handleQueryChange(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
           placeholder={placeholder}
           className="flex-1 text-sm outline-none bg-transparent"
         />
-        <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
+        
+        {/* ✅ Clear button (X) - shows when value exists and dropdown is closed */}
+        {value && !open && (
+          <button
+            onClick={handleClear}
+            className="ml-2 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+            type="button"
+            aria-label="Clear selection"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+        
+        <ChevronDown className="h-4 w-4 text-gray-400 ml-2 flex-shrink-0" />
       </div>
 
-      {open && filteredOptions.length > 0 && (
-        <div className="absolute z-20 mt-1 w-full max-h-48 overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
-          {filteredOptions.map((opt) => (
+      {open && filtered.length > 0 && (
+        <div className="absolute z-20 mt-1 w-full max-h-48 overflow-auto rounded-md border bg-white shadow-lg">
+          {filtered.map((opt) => (
             <div
               key={opt}
-              onClick={() => handleSelect(opt)}
+              onClick={() => {
+                onChange(opt);
+                setOpen(false);
+                setQuery("");
+              }}
               className="px-3 py-2 text-sm hover:bg-slate-100 cursor-pointer"
             >
               {opt}
