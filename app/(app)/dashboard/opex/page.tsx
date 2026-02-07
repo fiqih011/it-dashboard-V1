@@ -18,7 +18,6 @@ import type { BudgetStatusData } from "@/components/dashboard/opex/OpexStatusDon
 import type {
   DashboardOpexFilterValue,
   DashboardFilterOptions,
-  DashboardGlobalSummary,
 } from "@/types/dashboard";
 
 export default function DashboardOpexPage() {
@@ -48,10 +47,9 @@ export default function DashboardOpexPage() {
   });
 
   // =====================================================
-  // DATA STATE
+  // DATA STATE (SOURCE OF TRUTH)
   // =====================================================
-  const [globalSummary, setGlobalSummary] =
-    useState<DashboardGlobalSummary | null>(null);
+  const [budgetData, setBudgetData] = useState<BudgetUsageItem[]>([]);
 
   const [chartDistribution, setChartDistribution] =
     useState<DistributionChartData[]>([]);
@@ -59,18 +57,12 @@ export default function DashboardOpexPage() {
   const [chartStatus, setChartStatus] =
     useState<BudgetStatusData | null>(null);
 
-  const [budgetData, setBudgetData] = useState<BudgetUsageItem[]>([]);
-
   // =====================================================
   // LOADING / ERROR
   // =====================================================
-  const [loadingGlobal, setLoadingGlobal] = useState(true);
   const [loadingCharts, setLoadingCharts] = useState(false);
   const [loadingTable, setLoadingTable] = useState(true);
-
-  const [errorGlobal, setErrorGlobal] = useState<string | null>(null);
   const [errorCharts, setErrorCharts] = useState<string | null>(null);
-  const [errorTable, setErrorTable] = useState<string | null>(null);
 
   // =====================================================
   // MODAL
@@ -94,8 +86,6 @@ export default function DashboardOpexPage() {
 
     await rebuildFilterOptionsByYear(currentYear);
 
-    // 🔒 NORMALIZED COA → ""
-    fetchGlobalSummary(currentYear, "");
     fetchTableData({
       year: currentYear,
       budgetId: "",
@@ -151,69 +141,10 @@ export default function DashboardOpexPage() {
   };
 
   // =====================================================
-  // FETCH GLOBAL SUMMARY (COA AWARE)
-  // =====================================================
-  const fetchGlobalSummary = async (year: string, coa: string) => {
-    setLoadingGlobal(true);
-    setErrorGlobal(null);
-
-    try {
-      const params = new URLSearchParams({ year });
-      if (coa) params.append("coa", coa);
-
-      const res = await fetch(
-        `/api/dashboard/opex/summary?${params.toString()}`
-      );
-      if (!res.ok) throw new Error();
-
-      const data: DashboardGlobalSummary = await res.json();
-      setGlobalSummary(data);
-    } catch {
-      setErrorGlobal("Gagal mengambil global summary");
-    } finally {
-      setLoadingGlobal(false);
-    }
-  };
-
-  // =====================================================
-  // FETCH CHARTS DATA
-  // =====================================================
-  const fetchChartsData = async (coa: string, year: string) => {
-    setLoadingCharts(true);
-    setErrorCharts(null);
-
-    try {
-      const res = await fetch(
-        `/api/dashboard/opex/charts/${coa}?year=${year}`
-      );
-
-      if (!res.ok) {
-        if (res.status === 404) {
-          setChartDistribution([]);
-          setChartStatus(null);
-          return;
-        }
-        throw new Error();
-      }
-
-      const data = await res.json();
-      setChartDistribution(data.distributionData || []);
-      setChartStatus(data.statusData || null);
-    } catch {
-      setErrorCharts("Gagal mengambil data charts");
-      setChartDistribution([]);
-      setChartStatus(null);
-    } finally {
-      setLoadingCharts(false);
-    }
-  };
-
-  // =====================================================
-  // FETCH TABLE DATA
+  // FETCH TABLE DATA (SOURCE OF TRUTH)
   // =====================================================
   const fetchTableData = async (filters: DashboardOpexFilterValue) => {
     setLoadingTable(true);
-    setErrorTable(null);
 
     try {
       const params = new URLSearchParams();
@@ -228,10 +159,33 @@ export default function DashboardOpexPage() {
 
       const data: BudgetUsageItem[] = await res.json();
       setBudgetData(data);
-    } catch {
-      setErrorTable("Gagal mengambil data tabel");
     } finally {
       setLoadingTable(false);
+    }
+  };
+
+  // =====================================================
+  // FETCH CHARTS
+  // =====================================================
+  const fetchChartsData = async (coa: string, year: string) => {
+    setLoadingCharts(true);
+    setErrorCharts(null);
+
+    try {
+      const res = await fetch(
+        `/api/dashboard/opex/charts/${coa}?year=${year}`
+      );
+      if (!res.ok) throw new Error();
+
+      const data = await res.json();
+      setChartDistribution(data.distributionData || []);
+      setChartStatus(data.statusData || null);
+    } catch {
+      setErrorCharts("Gagal mengambil data charts");
+      setChartDistribution([]);
+      setChartStatus(null);
+    } finally {
+      setLoadingCharts(false);
     }
   };
 
@@ -257,16 +211,12 @@ export default function DashboardOpexPage() {
 
   const handleSearch = () => {
     const year = filterDraft.year || currentYear;
-    const coa = filterDraft.coa ?? "";
 
     setFilterApplied({ ...filterDraft, year });
-
-    // 🔒 NORMALIZED COA
-    fetchGlobalSummary(year, coa);
     fetchTableData({ ...filterDraft, year });
 
-    if (coa) {
-      fetchChartsData(coa, year);
+    if (filterDraft.coa) {
+      fetchChartsData(filterDraft.coa, year);
     } else {
       setChartDistribution([]);
       setChartStatus(null);
@@ -286,9 +236,6 @@ export default function DashboardOpexPage() {
     setFilterApplied(reset);
 
     await rebuildFilterOptionsByYear(currentYear);
-
-    // 🔒 RESET = GLOBAL
-    fetchGlobalSummary(currentYear, "");
     fetchTableData(reset);
 
     setChartDistribution([]);
@@ -303,10 +250,6 @@ export default function DashboardOpexPage() {
   const handleCloseModal = () => {
     setModalOpen(false);
     setSelectedBudgetId("");
-  };
-
-  const handleRefreshTable = () => {
-    fetchTableData(filterApplied);
   };
 
   // =====================================================
@@ -337,10 +280,10 @@ export default function DashboardOpexPage() {
         onReset={handleReset}
       />
 
+      {/* ✅ GLOBAL SUMMARY — SOURCE = TABLE */}
       <OpexGlobalSummary
-        data={globalSummary}
-        loading={loadingGlobal}
-        error={errorGlobal}
+        data={budgetData}
+        loading={loadingTable}
       />
 
       {filterApplied.coa && (
@@ -356,7 +299,6 @@ export default function DashboardOpexPage() {
       <BudgetUsageTable
         data={budgetData}
         loading={loadingTable}
-        onRefresh={handleRefreshTable}
         onViewDetails={handleViewDetails}
       />
 
