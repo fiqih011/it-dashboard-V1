@@ -7,7 +7,7 @@ import {
   LayoutDashboard,
   Wallet,
   ArrowLeftRight,
-  Database,
+  Users, // ✅ TAMBAH
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -27,6 +27,12 @@ const menus = [
     label: "Transaksi",
     href: "/transactions",
     icon: ArrowLeftRight,
+  },
+  // ✅ TAMBAH MENU BARU
+  {
+    label: "User Management",
+    href: "/user-management",
+    icon: Users,
   },
 ];
 

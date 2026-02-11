@@ -7,143 +7,137 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-//
-// ==========================
-// BUDGET PLAN — OPEX
-// ==========================
 model BudgetPlanOpex {
-  id                    String   @id @default(uuid())
-  displayId             String   @unique @map("display_id")
+  id                    String            @id @default(uuid())
+  displayId             String            @unique @map("display_id")
   year                  Int
   coa                   String
   category              String
   component             String
-
-  budgetPlanAmount      BigInt   @map("budget_plan_amount")
-  budgetRealisasiAmount BigInt   @map("budget_realisasi_amount")
-  budgetRemainingAmount BigInt   @map("budget_remaining_amount")
-
+  budgetPlanAmount      BigInt            @map("budget_plan_amount")
+  budgetRealisasiAmount BigInt            @map("budget_realisasi_amount")
+  budgetRemainingAmount BigInt            @map("budget_remaining_amount")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
   transactions          TransactionOpex[]
-
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@map("budget_plan_opex")
 }
 
-//
-// ==========================
-// TRANSACTION — OPEX
-// ==========================
 model TransactionOpex {
-  id               String   @id @default(uuid())
-
-  // Human readable Transaction ID
-  // Format: TRX-OP-YY-XXXX
-  displayId        String   @unique @map("display_id")
-
-  budgetPlanOpexId String   @map("budget_plan_opex_id")
-
+  id               String         @id @default(uuid())
+  budgetPlanOpexId String         @map("budget_plan_opex_id")
   vendor           String
   requester        String
-  prNumber         String?  @map("pr_number")
-  poType           String?  @map("po_type")
-  poNumber         String?  @map("po_number")
-  documentGr       String?  @map("document_gr")
+  prNumber         String?        @map("pr_number")
+  poType           String?        @map("po_type")
+  poNumber         String?        @map("po_number")
+  documentGr       String?        @map("document_gr")
   description      String
   qty              Int
   amount           BigInt
-
-  submissionDate   DateTime? @map("submission_date")
-  approvedDate     DateTime? @map("approved_date")
-  deliveryDate     DateTime? @map("delivery_date")
-
-  oc               String?  @map("o_c")
-  ccLob            String?  @map("cc_lob")
+  submissionDate   DateTime?      @map("submission_date")
+  approvedDate     DateTime?      @map("approved_date")
+  deliveryDate     DateTime?      @map("delivery_date")
+  oc               String?        @map("o_c")
+  ccLob            String?        @map("cc_lob")
   coa              String
   status           String
   notes            String?
-
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  displayId        String         @unique @map("display_id")
   budgetPlan       BudgetPlanOpex @relation(fields: [budgetPlanOpexId], references: [id])
-
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
 
   @@map("transaction_opex")
 }
 
-//
-// ==========================
-// BUDGET PLAN — CAPEX
-// ==========================
 model BudgetPlanCapex {
-  id                    String   @id @default(uuid())
-
-  // Human readable Budget ID
-  // Format: CA-YY-XXXX
-  budgetDisplayId       String   @unique @map("budget_display_id")
-
+  id                    String             @id @default(uuid())
   year                  Int
-
-  itemCode              String   @map("item_code")
-  itemDescription       String   @map("item_description")
-
-  // SINGLE SOURCE OF TRUTH — No CAPEX
-  noCapex               String?  @map("no_capex")
-
-  itemRemark            String?  @map("item_remark")
-
-  budgetPlanAmount      BigInt   @map("budget_plan_amount")
-  budgetRealisasiAmount BigInt   @map("budget_realisasi_amount")
-  budgetRemainingAmount BigInt   @map("budget_remaining_amount")
-
+  itemCode              String             @map("item_code")
+  itemDescription       String             @map("item_description")
+  itemRemark            String?            @map("item_remark")
+  budgetPlanAmount      BigInt             @map("budget_plan_amount")
+  budgetRealisasiAmount BigInt             @map("budget_realisasi_amount")
+  budgetRemainingAmount BigInt             @map("budget_remaining_amount")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+  budgetDisplayId       String             @unique @map("budget_display_id")
+  noCapex               String?            @map("no_capex")
   transactions          TransactionCapex[]
-
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@map("budget_plan_capex")
 }
 
-//
-// ==========================
-// TRANSACTION — CAPEX
-// ==========================
 model TransactionCapex {
-  id                     String   @id @default(uuid())
-
-  // Human readable Transaction ID
-  // Format: TRX-CA-YY-XXXX
-  transactionDisplayId   String   @unique @map("transaction_display_id")
-
-  budgetPlanCapexId      String   @map("budget_plan_capex_id")
-
-  vendor                 String
-  requester              String
-  projectCode            String?  @map("project_code")
-  noUi                   String?  @map("no_ui")
-  prNumber               String?  @map("pr_number")
-  poType                 String?  @map("po_type")
-  poNumber               String?  @map("po_number")
-  documentGr             String?  @map("document_gr")
-  description            String
-  assetNumber            String?  @map("asset_number")
-  qty                    Int
-  amount                 BigInt
-
-  submissionDate         DateTime? @map("submission_date")
-  approvedDate           DateTime? @map("approved_date")
-  deliveryStatus         String?   @map("delivery_status") // ✅ SATU-SATUNYA PERUBAHAN
-
-  oc                     String?  @map("o_c")
-  ccLob                  String?  @map("cc_lob")
-  status                 String
-  notes                  String?
-
-  budgetPlan             BudgetPlanCapex @relation(fields: [budgetPlanCapexId], references: [id])
-
-  createdAt              DateTime @default(now()) @map("created_at")
-  updatedAt              DateTime @updatedAt @map("updated_at")
+  id                   String          @id @default(uuid())
+  budgetPlanCapexId    String          @map("budget_plan_capex_id")
+  vendor               String
+  requester            String
+  projectCode          String?         @map("project_code")
+  noUi                 String?         @map("no_ui")
+  prNumber             String?         @map("pr_number")
+  poType               String?         @map("po_type")
+  poNumber             String?         @map("po_number")
+  documentGr           String?         @map("document_gr")
+  description          String
+  assetNumber          String?         @map("asset_number")
+  qty                  Int
+  amount               BigInt
+  submissionDate       DateTime?       @map("submission_date")
+  approvedDate         DateTime?       @map("approved_date")
+  oc                   String?         @map("o_c")
+  ccLob                String?         @map("cc_lob")
+  status               String
+  notes                String?
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+  transactionDisplayId String          @unique @map("transaction_display_id")
+  deliveryStatus       String?         @map("delivery_status")
+  budgetPlan           BudgetPlanCapex @relation(fields: [budgetPlanCapexId], references: [id])
 
   @@map("transaction_capex")
+}
+
+model activity_logs {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actor_id       String?  @db.Uuid
+  actor_username String   @db.VarChar(50)
+  action         String   @db.VarChar(50)
+  module         String   @db.VarChar(50)
+  target_type    String?  @db.VarChar(50)
+  target_id      String?  @db.Uuid
+  description    String?
+  metadata       Json?
+  ip_address     String?  @db.VarChar(45)
+  user_agent     String?
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([action], map: "idx_activity_logs_action")
+  @@index([actor_id], map: "idx_activity_logs_actor_id")
+  @@index([created_at], map: "idx_activity_logs_created_at")
+  @@index([module], map: "idx_activity_logs_module")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model users {
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username                String    @unique @db.VarChar(50)
+  full_name               String    @db.VarChar(100)
+  role                    String    @db.VarChar(20)
+  status                  String    @db.VarChar(20)
+  password_hash           String
+  force_change_password   Boolean   @default(true)
+  password_expires_at     DateTime? @db.Timestamp(6)
+  last_password_change_at DateTime? @db.Timestamp(6)
+  last_login_at           DateTime? @db.Timestamp(6)
+  login_attempt_failed    Int       @default(0)
+  created_at              DateTime  @default(now()) @db.Timestamp(6)
+  updated_at              DateTime  @default(now()) @db.Timestamp(6)
+  created_by              String?   @db.Uuid
+  updated_by              String?   @db.Uuid
+
+  @@index([role], map: "idx_users_role")
+  @@index([status], map: "idx_users_status")
 }
