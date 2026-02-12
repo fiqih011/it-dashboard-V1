@@ -1,21 +1,38 @@
-// app/(app)/layout.tsx
+"use client";
 
-import Sidebar from "@/components/layout/Sidebar";
+import { SessionProvider } from "next-auth/react";
+import AppLayout from "@/components/layout/AppLayout";
 
-export default function AppLayout({
+/**
+ * ============================================
+ * AUTHENTICATED LAYOUT (WITHOUT FORCE CHANGE MODAL)
+ * ============================================
+ * 
+ * This version is for initial testing.
+ * 
+ * TO ADD FORCE CHANGE PASSWORD LATER:
+ * 1. Create: components/modal/ForceChangePasswordModal.tsx
+ * 2. Uncomment import below
+ * 3. Uncomment modal component below
+ */
+
+// import ForceChangePasswordModal from "@/components/modal/ForceChangePasswordModal";
+
+export default function AuthenticatedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      {/* SIDEBAR */}
-      <Sidebar />
+    <SessionProvider>
+      {/* 
+        Force Change Password Modal 
+        Uncomment when file is created:
+        <ForceChangePasswordModal /> 
+      */}
 
-      {/* MAIN CONTENT */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="px-6 py-6 space-y-6">{children}</div>
-      </main>
-    </div>
+      {/* Main App Layout */}
+      <AppLayout>{children}</AppLayout>
+    </SessionProvider>
   );
 }

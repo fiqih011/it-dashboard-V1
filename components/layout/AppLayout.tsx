@@ -1,3 +1,6 @@
+"use client";
+
+import { useSession } from "next-auth/react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 
@@ -6,9 +9,14 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { data: session } = useSession();
+
   return (
     <div className="flex h-screen bg-slate-50">
-      <Sidebar />
+      {/* Sidebar - only show if authenticated */}
+      {session && <Sidebar />}
+
+      {/* Main Content */}
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>

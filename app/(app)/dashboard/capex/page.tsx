@@ -251,7 +251,7 @@ export default function DashboardCapexPage() {
           className="mb-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Dashboard Menu</span>
+          <span>Back</span>
         </button>
 
         <h1 className="text-3xl font-bold text-gray-800">Dashboard CAPEX</h1>

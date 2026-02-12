@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Wallet,
   ArrowLeftRight,
-  Users, // ✅ TAMBAH
+  Users,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -17,28 +18,40 @@ const menus = [
     label: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+    roles: ["admin", "user"], // All authenticated users
   },
   {
     label: "Budget Plan",
     href: "/budget-plan",
     icon: Wallet,
+    roles: ["admin", "user"],
   },
   {
     label: "Transaksi",
     href: "/transactions",
     icon: ArrowLeftRight,
+    roles: ["admin", "user"],
   },
-  // ✅ TAMBAH MENU BARU
   {
     label: "User Management",
     href: "/user-management",
     icon: Users,
+    roles: ["admin"], // Admin only
   },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(false);
+
+  const userRole = (session?.user as any)?.role || null;
+
+  // Filter menu based on user role
+  const filteredMenus = menus.filter((menu) => {
+    if (!userRole) return false; // Not authenticated
+    return menu.roles.includes(userRole);
+  });
 
   // Auto collapse untuk tablet
   useEffect(() => {
@@ -50,6 +63,9 @@ export default function Sidebar() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Don't render sidebar if not authenticated
+  if (!session) return null;
 
   return (
     <aside
@@ -76,7 +92,7 @@ export default function Sidebar() {
 
       {/* Menu */}
       <nav className="px-2 py-4 space-y-1">
-        {menus.map((menu) => {
+        {filteredMenus.map((menu) => {
           const active = pathname.startsWith(menu.href);
           const Icon = menu.icon;
 
