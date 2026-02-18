@@ -24,20 +24,14 @@ import { showError, showSuccess } from "@/lib/swal";
  * HELPERS
  * =========================================
  */
-function toOptions(values: Array<string | null | undefined>): FilterOption[] {
-  return Array.from(
-    new Set(
-      values
-        .filter((v): v is string => !!v && v.trim() !== "")
-        .map((v) => v.trim())
-    )
-  )
-    .sort()
-    .map((v) => ({ label: v, value: v }));
+function toOptions(values: string[]): FilterOption[] {
+  return values.map((v) => ({ label: v, value: v }));
 }
 
 export default function TransactionsOpexPage() {
   const router = useRouter();
+
+  const currentYear = new Date().getFullYear().toString();
 
   // =========================
   // TABLE DATA
@@ -46,15 +40,15 @@ export default function TransactionsOpexPage() {
   const [loading, setLoading] = useState(false);
 
   // =========================
-  // ✅ STABLE FILTER OPTIONS (DARI FETCH PERTAMA)
+  // FILTER OPTIONS (FROM API)
   // =========================
-  const [stableOptions, setStableOptions] = useState<{
-    years: FilterOption[];
-    transactionIds: FilterOption[];
-    budgetPlanIds: FilterOption[];
-    vendors: FilterOption[];
-    coas: FilterOption[];
-    descriptions: FilterOption[];
+  const [filterOptions, setFilterOptions] = useState<{
+    years: string[];
+    transactionIds: string[];
+    budgetPlanIds: string[];
+    vendors: string[];
+    coas: string[];
+    descriptions: string[];
   }>({
     years: [],
     transactionIds: [],
@@ -68,9 +62,14 @@ export default function TransactionsOpexPage() {
   // FILTER STATE
   // =========================
   const [draftFilters, setDraftFilters] =
-    useState<TransactionFilterValue>({});
+    useState<TransactionFilterValue>({
+      year: currentYear, // DEFAULT TAHUN BERJALAN
+    });
+
   const [appliedFilters, setAppliedFilters] =
-    useState<TransactionFilterValue>({});
+    useState<TransactionFilterValue>({
+      year: currentYear,
+    });
 
   // =========================
   // PAGINATION
@@ -87,10 +86,49 @@ export default function TransactionsOpexPage() {
 
   /**
    * =========================================
-   * ✅ FETCH TABLE DATA (DENGAN STABLE OPTIONS)
+   * STATS (BERDASARKAN DATA TABEL)
    * =========================================
    */
-  async function fetchTableData(isInitial = false) {
+  const stats = useMemo(() => {
+    const approved = rows.filter((r) => r.status === "Approved").length;
+    const pending = rows.filter((r) => r.status === "Pending").length;
+    const inProgress = rows.filter((r) => r.status === "In Progress").length;
+
+    return {
+      total,
+      approved,
+      pending,
+      inProgress,
+    };
+  }, [rows, total]);
+
+  /**
+   * =========================================
+   * FETCH FILTER OPTIONS (BASED ON YEAR)
+   * =========================================
+   */
+  async function fetchFilterOptions(year?: string) {
+    try {
+      const url = year
+        ? `/api/transaction/opex/filter-options?year=${year}`
+        : `/api/transaction/opex/filter-options`;
+
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Gagal mengambil filter options");
+
+      const json = await res.json();
+      setFilterOptions(json);
+    } catch (err) {
+      console.error("Filter options error:", err);
+    }
+  }
+
+  /**
+   * =========================================
+   * FETCH TABLE DATA
+   * =========================================
+   */
+  async function fetchTableData() {
     try {
       setLoading(true);
 
@@ -99,7 +137,6 @@ export default function TransactionsOpexPage() {
         pageSize: String(pageSize),
       });
 
-      // ✅ Apply filters
       Object.entries(appliedFilters).forEach(([key, value]) => {
         if (value && value.trim() !== "") {
           params.set(key, value);
@@ -112,26 +149,6 @@ export default function TransactionsOpexPage() {
       const json = await res.json();
       setRows(json.data ?? []);
       setTotal(json.total ?? 0);
-
-      // ✅ POLA BUDGET PLAN: Simpan options hanya dari fetch pertama
-      if (isInitial && json.data && json.data.length > 0) {
-        const data = json.data as TransactionRow[];
-        
-        setStableOptions({
-          years: toOptions(
-            data.map((r) =>
-              r.submissionDate
-                ? new Date(r.submissionDate).getFullYear().toString()
-                : null
-            )
-          ),
-          transactionIds: toOptions(data.map((r) => r.displayId)),
-          budgetPlanIds: toOptions(data.map((r) => r.budgetPlanDisplayId)),
-          vendors: toOptions(data.map((r) => r.vendor)),
-          coas: toOptions(data.map((r) => r.coa)),
-          descriptions: toOptions(data.map((r) => r.description)),
-        });
-      }
     } catch (err) {
       showError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -139,53 +156,79 @@ export default function TransactionsOpexPage() {
     }
   }
 
-  // ✅ Initial fetch dengan stable options
+  /**
+   * =========================================
+   * INITIAL LOAD
+   * =========================================
+   */
   useEffect(() => {
-    fetchTableData(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchFilterOptions(currentYear);
+    fetchTableData();
+    // eslint-disable-next-line
   }, []);
 
-  // ✅ Subsequent fetches (pagination, filter) TANPA update options
+  /**
+   * =========================================
+   * REFRESH TABLE ON FILTER CHANGE
+   * =========================================
+   */
   useEffect(() => {
-    if (stableOptions.years.length > 0) {
-      fetchTableData(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchTableData();
+    // eslint-disable-next-line
   }, [page, pageSize, appliedFilters]);
 
   /**
    * =========================================
-   * ✅ FILTER CONFIG (GUNAKAN STABLE OPTIONS)
+   * REFRESH OPTIONS WHEN YEAR DRAFT CHANGED
    * =========================================
    */
-  const filterFields: FilterFieldConfig<TransactionFilterValue>[] = useMemo(() => {
-    return transactionFilterConfig.map((field) => {
-      if (field.type !== "select") return field;
+  useEffect(() => {
+    fetchFilterOptions(draftFilters.year);
+  }, [draftFilters.year]);
 
-      switch (field.key) {
-        case "year":
-          return { ...field, options: stableOptions.years };
+  /**
+   * =========================================
+   * FILTER CONFIG
+   * =========================================
+   */
+  const filterFields: FilterFieldConfig<TransactionFilterValue>[] =
+    useMemo(() => {
+      return transactionFilterConfig.map((field) => {
+        if (field.type !== "select") return field;
 
-        case "transactionDisplayId":
-          return { ...field, options: stableOptions.transactionIds };
+        switch (field.key) {
+          case "year":
+            return { ...field, options: toOptions(filterOptions.years) };
 
-        case "budgetPlanDisplayId":
-          return { ...field, options: stableOptions.budgetPlanIds };
+          case "transactionDisplayId":
+            return {
+              ...field,
+              options: toOptions(filterOptions.transactionIds),
+            };
 
-        case "vendor":
-          return { ...field, options: stableOptions.vendors };
+          case "budgetPlanDisplayId":
+            return {
+              ...field,
+              options: toOptions(filterOptions.budgetPlanIds),
+            };
 
-        case "coa":
-          return { ...field, options: stableOptions.coas };
+          case "vendor":
+            return { ...field, options: toOptions(filterOptions.vendors) };
 
-        case "description":
-          return { ...field, options: stableOptions.descriptions };
+          case "coa":
+            return { ...field, options: toOptions(filterOptions.coas) };
 
-        default:
-          return field;
-      }
-    });
-  }, [stableOptions]);
+          case "description":
+            return {
+              ...field,
+              options: toOptions(filterOptions.descriptions),
+            };
+
+          default:
+            return field;
+        }
+      });
+    }, [filterOptions]);
 
   /**
    * =========================================
@@ -193,7 +236,10 @@ export default function TransactionsOpexPage() {
    * =========================================
    */
   async function handleDelete(id: string): Promise<boolean> {
-    const res = await fetch(`/api/transaction/opex/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/transaction/opex/${id}`, {
+      method: "DELETE",
+    });
+
     if (!res.ok) {
       const err = await res.json();
       showError(err.error ?? "Gagal menghapus transaksi");
@@ -201,7 +247,8 @@ export default function TransactionsOpexPage() {
     }
 
     showSuccess("Transaksi berhasil dihapus");
-    fetchTableData(false);
+    fetchTableData();
+    fetchFilterOptions(draftFilters.year);
     return true;
   }
 
@@ -210,7 +257,7 @@ export default function TransactionsOpexPage() {
     setOpenEdit(true);
   }
 
-  if (loading && stableOptions.years.length === 0) {
+  if (loading && rows.length === 0) {
     return <div className="p-6">Loading transaksi…</div>;
   }
 
@@ -226,6 +273,37 @@ export default function TransactionsOpexPage() {
         <h1 className="text-xl font-semibold">Tabel Transaksi OPEX</h1>
       </div>
 
+      {/* ================= STATS CARDS ================= */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+          <p className="text-sm text-gray-500">Total Transaksi</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">
+            {stats.total}
+          </p>
+        </div>
+
+        <div className="bg-emerald-50 border border-emerald-100 rounded-xl shadow-sm p-5">
+          <p className="text-sm text-emerald-700">Approved</p>
+          <p className="text-2xl font-bold text-emerald-800 mt-1">
+            {stats.approved}
+          </p>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-100 rounded-xl shadow-sm p-5">
+          <p className="text-sm text-amber-700">Pending</p>
+          <p className="text-2xl font-bold text-amber-800 mt-1">
+            {stats.pending}
+          </p>
+        </div>
+
+        <div className="bg-blue-50 border border-blue-100 rounded-xl shadow-sm p-5">
+          <p className="text-sm text-blue-700">In Progress</p>
+          <p className="text-2xl font-bold text-blue-800 mt-1">
+            {stats.inProgress}
+          </p>
+        </div>
+      </div>
+
       <TransactionFilter
         value={draftFilters}
         onChange={setDraftFilters}
@@ -234,8 +312,8 @@ export default function TransactionsOpexPage() {
           setAppliedFilters(draftFilters);
         }}
         onReset={() => {
-          setDraftFilters({});
-          setAppliedFilters({});
+          setDraftFilters({ year: currentYear });
+          setAppliedFilters({ year: currentYear });
           setPage(1);
         }}
         fields={filterFields}
@@ -265,7 +343,10 @@ export default function TransactionsOpexPage() {
           setOpenEdit(false);
           setSelectedId(null);
         }}
-        onSuccess={() => fetchTableData(false)}
+        onSuccess={() => {
+          fetchTableData();
+          fetchFilterOptions(draftFilters.year);
+        }}
       />
     </div>
   );

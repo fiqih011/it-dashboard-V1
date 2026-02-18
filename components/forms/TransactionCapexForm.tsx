@@ -1,279 +1,477 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Button from "@/components/ui/Button";
+import { useState } from "react";
 
-/* ===============================
- * TYPE
- * =============================== */
 export type TransactionCapexFormData = {
-  transactionId?: string;
-  budgetPlanCapexId?: string;
-
   vendor: string;
   requester: string;
-
+  
   projectCode: string;
   noUi: string;
+  
   prNumber: string;
-
-  poType: "PO" | "NON_PO" | "";
+  poType: string;
   poNumber: string;
   documentGR: string;
-
+  
   description: string;
   assetNumber: string;
-
+  
   qty: number;
   amount: string;
-
+  
   submissionDate: string;
   approvedDate: string;
-
-  deliveryStatus: "Received" | "On Progress" | "Cancelled" | "";
-  opexCapex: "CAPEX";
-
-  oc: "OPEX" | "CAPEX" | "";
+  
+  deliveryStatus: string;
+  opexCapex: string;
+  
+  oc: string;
   ccLob: string;
-  status: "Draft" | "Approved" | "Rejected" | "Full Approved" | "";
+  status: string;
   notes: string;
 };
 
 type Props = {
-  initialData?: TransactionCapexFormData;
-  remainingBudget?: string; // Not used in form anymore, only in modal header
-  onSubmit: (data: TransactionCapexFormData) => Promise<void>;
-  onCancel?: () => void;
-};
-
-/* ===============================
- * EMPTY FORM (VALID)
- * =============================== */
-const emptyForm: TransactionCapexFormData = {
-  transactionId: undefined,
-  budgetPlanCapexId: undefined,
-
-  vendor: "",
-  requester: "",
-
-  projectCode: "",
-  noUi: "",
-  prNumber: "",
-
-  poType: "",
-  poNumber: "",
-  documentGR: "",
-
-  description: "",
-  assetNumber: "",
-
-  qty: 1,
-  amount: "",
-
-  submissionDate: "",
-  approvedDate: "",
-
-  deliveryStatus: "",
-  opexCapex: "CAPEX",
-
-  oc: "",
-  ccLob: "",
-  status: "",
-  notes: "",
+  initialData: TransactionCapexFormData;
+  remainingBudget?: string;
+  onSubmit: (data: TransactionCapexFormData) => void | Promise<void>;
+  onCancel: () => void;
 };
 
 export default function TransactionCapexForm({
   initialData,
+  remainingBudget,
   onSubmit,
   onCancel,
 }: Props) {
-  const [form, setForm] = useState<TransactionCapexFormData>(emptyForm);
-  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState<TransactionCapexFormData>(initialData);
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (initialData) {
-      setForm({ ...emptyForm, ...initialData });
-    } else {
-      setForm(emptyForm);
-    }
-  }, [initialData]);
-
-  function handleChange(
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) {
-    const { name, value } = e.target;
-
-    setForm((prev) => ({
-      ...prev,
-      [name]: name === "qty" ? Number(value) : value,
-    }));
+  function handleChange(key: keyof TransactionCapexFormData, value: string | number) {
+    setFormData((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function handleSubmit() {
-    if (
-      !form.vendor ||
-      !form.requester ||
-      !form.description ||
-      !form.amount ||
-      !form.poType ||
-      !form.deliveryStatus ||
-      !form.status ||
-      !form.oc
-    ) {
-      alert("Field wajib belum lengkap");
-      return;
-    }
-
-    setLoading(true);
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
     try {
-      await onSubmit(form);
+      await onSubmit(formData);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   }
 
   return (
-    <div className="space-y-5">
-      {/* HEADER */}
-      <div className="grid grid-cols-2 gap-4">
-        <Input label="Vendor" name="vendor" value={form.vendor} onChange={handleChange} required />
-        <Input label="Requester" name="requester" value={form.requester} onChange={handleChange} required />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <Select
-          label="PO / Non PO"
-          name="poType"
-          value={form.poType}
-          onChange={handleChange}
-          options={[
-            { label: "PO", value: "PO" },
-            { label: "Non PO", value: "NON_PO" },
-          ]}
-          required
-        />
-        <Input label="Project Code" name="projectCode" value={form.projectCode} onChange={handleChange} />
-        <Input label="No UI" name="noUi" value={form.noUi} onChange={handleChange} />
-        <Input label="PR Number" name="prNumber" value={form.prNumber} onChange={handleChange} />
-        <Input label="PO Number" name="poNumber" value={form.poNumber} onChange={handleChange} />
-        <Input label="Document GR" name="documentGR" value={form.documentGR} onChange={handleChange} />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <Input label="QTY" name="qty" type="number" value={form.qty} onChange={handleChange} />
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* 
+        =====================================================
+        SECTION 1: BASIC INFORMATION
+        =====================================================
+      */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <span className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">1</span>
+          Basic Information
+        </h3>
         
-        {/* ✅ Amount tanpa "Sisa Budget" - sudah ada di header */}
-        <Input label="Amount" name="amount" type="number" value={form.amount} onChange={handleChange} required />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Vendor <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.vendor}
+              onChange={(e) => handleChange("vendor", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Vendor name"
+            />
+          </div>
 
-        <Select
-          label="CAPEX / OPEX"
-          name="oc"
-          value={form.oc}
-          onChange={handleChange}
-          options={[
-            { label: "CAPEX", value: "CAPEX" },
-            { label: "OPEX", value: "OPEX" },
-          ]}
-          required
-        />
-        <Input label="CC / LOB" name="ccLob" value={form.ccLob} onChange={handleChange} />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Requester <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.requester}
+              onChange={(e) => handleChange("requester", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Requester name"
+            />
+          </div>
+        </div>
       </div>
 
-      <Textarea label="Description" name="description" value={form.description} onChange={handleChange} required />
+      {/* 
+        =====================================================
+        SECTION 2: PROJECT & ASSET INFO
+        =====================================================
+      */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <span className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-sm font-bold">2</span>
+          Project & Asset
+        </h3>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Project Code
+            </label>
+            <input
+              type="text"
+              value={formData.projectCode}
+              onChange={(e) => handleChange("projectCode", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Project code"
+            />
+          </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <Input type="date" label="Submission Date" name="submissionDate" value={form.submissionDate} onChange={handleChange} />
-        <Input type="date" label="Approved Date" name="approvedDate" value={form.approvedDate} onChange={handleChange} />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Asset Number
+            </label>
+            <input
+              type="text"
+              value={formData.assetNumber}
+              onChange={(e) => handleChange("assetNumber", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Asset number"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              No UI
+            </label>
+            <input
+              type="text"
+              value={formData.noUi}
+              onChange={(e) => handleChange("noUi", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="UI number"
+            />
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <Select
-          label="Status"
-          name="status"
-          value={form.status}
-          onChange={handleChange}
-          options={[
-            { label: "Draft", value: "Draft" },
-            { label: "Approved", value: "Approved" },
-            { label: "Rejected", value: "Rejected" },
-            { label: "Full Approved", value: "Full Approved" },
-          ]}
-          required
-        />
-        <Select
-          label="Delivery Status"
-          name="deliveryStatus"
-          value={form.deliveryStatus}
-          onChange={handleChange}
-          options={[
-            { label: "Received", value: "Received" },
-            { label: "On Progress", value: "On Progress" },
-            { label: "Cancelled", value: "Cancelled" },
-          ]}
-          required
-        />
+      {/* 
+        =====================================================
+        SECTION 3: PURCHASE DOCUMENTS
+        =====================================================
+      */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <span className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-sm font-bold">3</span>
+          Purchase Documents
+        </h3>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              PO / Non PO <span className="text-red-500">*</span>
+            </label>
+            <select
+              required
+              value={formData.poType}
+              onChange={(e) => handleChange("poType", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Select type</option>
+              <option value="PO">PO</option>
+              <option value="Non PO">Non PO</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              PR Number
+            </label>
+            <input
+              type="text"
+              value={formData.prNumber}
+              onChange={(e) => handleChange("prNumber", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="PR number"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              PO Number
+            </label>
+            <input
+              type="text"
+              value={formData.poNumber}
+              onChange={(e) => handleChange("poNumber", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="PO number"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Document GR
+            </label>
+            <input
+              type="text"
+              value={formData.documentGR}
+              onChange={(e) => handleChange("documentGR", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="GR number"
+            />
+          </div>
+        </div>
       </div>
 
-      <Textarea label="Notes" name="notes" value={form.notes} onChange={handleChange} />
+      {/* 
+        =====================================================
+        SECTION 4: ITEM DETAILS
+        =====================================================
+      */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <span className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold">4</span>
+          Item Details
+        </h3>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => handleChange("description", e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Item/asset description"
+            />
+          </div>
 
-      <div className="flex justify-end gap-3 border-t pt-4">
-        <Button variant="secondary" onClick={onCancel} disabled={loading}>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                QTY
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={formData.qty}
+                onChange={(e) => handleChange("qty", Number(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Amount <span className="text-red-500">*</span>
+                {remainingBudget && (
+                  <span className="ml-2 text-xs text-green-600 font-normal">
+                    (Remaining: Rp {remainingBudget})
+                  </span>
+                )}
+              </label>
+              <input
+                type="number"
+                required
+                min="0"
+                value={formData.amount}
+                onChange={(e) => handleChange("amount", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Amount value"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 
+        =====================================================
+        SECTION 5: DATES & STATUS
+        =====================================================
+      */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <span className="w-8 h-8 rounded-full bg-cyan-100 text-cyan-600 flex items-center justify-center text-sm font-bold">5</span>
+          Dates & Status
+        </h3>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Submission Date
+            </label>
+            <input
+              type="date"
+              value={formData.submissionDate}
+              onChange={(e) => handleChange("submissionDate", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Approved Date
+            </label>
+            <input
+              type="date"
+              value={formData.approvedDate}
+              onChange={(e) => handleChange("approvedDate", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Status <span className="text-red-500">*</span>
+            </label>
+            <select
+              required
+              value={formData.status}
+              onChange={(e) => handleChange("status", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Select status</option>
+              <option value="Approved">Approved</option>
+              <option value="Pending">Pending</option>
+              <option value="In Progress">In Progress</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Delivery Status <span className="text-red-500">*</span>
+            </label>
+            <select
+              required
+              value={formData.deliveryStatus}
+              onChange={(e) => handleChange("deliveryStatus", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Select delivery status</option>
+              <option value="On Progress">On Progress</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Pending">Pending</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* 
+        =====================================================
+        SECTION 6: CLASSIFICATION
+        =====================================================
+      */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <span className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">6</span>
+          Classification
+        </h3>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              CAPEX / OPEX <span className="text-red-500">*</span>
+            </label>
+            <select
+              required
+              value={formData.opexCapex}
+              onChange={(e) => handleChange("opexCapex", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+              disabled
+            >
+              <option value="CAPEX">CAPEX</option>
+              <option value="OPEX">OPEX</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              CC / LOB
+            </label>
+            <input
+              type="text"
+              value={formData.ccLob}
+              onChange={(e) => handleChange("ccLob", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Cost Center / Line of Business"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              O / C
+            </label>
+            <input
+              type="text"
+              value={formData.oc}
+              onChange={(e) => handleChange("oc", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="O / C"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 
+        =====================================================
+        SECTION 7: NOTES
+        =====================================================
+      */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <span className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-sm font-bold">7</span>
+          Notes
+        </h3>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Notes
+          </label>
+          <textarea
+            value={formData.notes}
+            onChange={(e) => handleChange("notes", e.target.value)}
+            rows={4}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Additional notes (optional)"
+          />
+        </div>
+      </div>
+
+      {/* 
+        =====================================================
+        ACTIONS
+        =====================================================
+      */}
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={submitting}
+          className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
           Cancel
-        </Button>
-        <Button variant="primary" onClick={handleSubmit} disabled={loading}>
-          {loading ? "Menyimpan..." : "Simpan"}
-        </Button>
+        </button>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {submitting ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              Saving...
+            </>
+          ) : (
+            "Save Changes"
+          )}
+        </button>
       </div>
-    </div>
-  );
-}
-
-/* ===== SMALL INPUTS ===== */
-function Input(props: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
-  const { label, ...rest } = props;
-  return (
-    <div>
-      <label className="text-sm font-medium">
-        {label} {props.required && <span className="text-red-500">*</span>}
-      </label>
-      <input {...rest} className="w-full border rounded-lg px-3 py-2" />
-    </div>
-  );
-}
-
-function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }) {
-  const { label, ...rest } = props;
-  return (
-    <div>
-      <label className="text-sm font-medium">{label}</label>
-      <textarea {...rest} className="w-full border rounded-lg px-3 py-2" />
-    </div>
-  );
-}
-
-function Select({
-  label,
-  options,
-  ...props
-}: {
-  label: string;
-  options: { label: string; value: string }[];
-} & React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <div>
-      <label className="text-sm font-medium">
-        {label} {props.required && <span className="text-red-500">*</span>}
-      </label>
-      <select {...props} className="w-full border rounded-lg px-3 py-2">
-        {props.value === "" && <option value="">-</option>}
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </div>
+    </form>
   );
 }

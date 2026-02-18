@@ -12,8 +12,11 @@ export default function ScrollableTable({
   minWidth,
 }: Props) {
   return (
-    <div className="w-full overflow-x-auto overflow-y-hidden">
-      <div style={minWidth ? { minWidth } : { minWidth: '100%' }}>
+    <div className="w-full overflow-x-auto overflow-y-hidden rounded-xl">
+      <div
+        style={minWidth ? { minWidth } : { minWidth: "100%" }}
+        className="transition-all"
+      >
         {children}
       </div>
     </div>

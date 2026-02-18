@@ -47,15 +47,16 @@ export default function PaginationBar({
   const endItem = Math.min(page * pageSize, total);
 
   return (
-    <div className="mt-4 flex items-center justify-between text-sm">
-      {/* LEFT — PAGE SIZE + INFO */}
-      <div className="flex items-center gap-4 text-gray-600">
+    <div className="mt-6 bg-white border border-gray-200 rounded-xl px-6 py-4 shadow-sm flex items-center justify-between text-sm">
+      
+      {/* LEFT */}
+      <div className="flex items-center gap-6 text-gray-600">
         <div className="flex items-center gap-2">
-          <span>Show</span>
+          <span className="text-gray-500">Show</span>
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="rounded border px-2 py-1"
+            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
           >
             {[10, 25, 50].map((n) => (
               <option key={n} value={n}>
@@ -63,16 +64,23 @@ export default function PaginationBar({
               </option>
             ))}
           </select>
-          <span>entries</span>
+          <span className="text-gray-500">entries</span>
         </div>
 
-        <div>
-          Showing {startItem}–{endItem} of {total}
+        <div className="text-gray-500">
+          Showing{" "}
+          <span className="font-medium text-gray-800">
+            {startItem}–{endItem}
+          </span>{" "}
+          of{" "}
+          <span className="font-medium text-gray-800">
+            {total}
+          </span>
         </div>
       </div>
 
-      {/* RIGHT — PAGINATION */}
-      <div className="flex items-center gap-1">
+      {/* RIGHT */}
+      <div className="flex items-center gap-2">
         <Button
           variant="secondary"
           disabled={page === 1}
@@ -83,7 +91,10 @@ export default function PaginationBar({
 
         {pages.map((p, i) =>
           p === "..." ? (
-            <span key={`dots-${i}`} className="px-2 text-gray-400">
+            <span
+              key={`dots-${i}`}
+              className="px-2 text-gray-400 select-none"
+            >
               …
             </span>
           ) : (

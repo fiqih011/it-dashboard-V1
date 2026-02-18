@@ -7,25 +7,24 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import TransactionActionCell from "@/components/table/TransactionActionCell";
-import ScrollableTable from "@/components/table/ScrollableTable";
 
 /**
  * =========================================
- * TYPES — SESUAI API (JANGAN DIUBAH LAGI)
+ * TYPES — JANGAN DIUBAH
  * =========================================
  */
 export type TransactionRow = {
-  id: string; // UUID (UNTUK ACTION)
+  id: string;
 
-  displayId: string; // TRX-OP-25-0145 ✅
-  budgetPlanDisplayId?: string | null; // OP-250029 ✅
+  displayId: string;
+  budgetPlanDisplayId?: string | null;
 
   vendor: string;
   requester: string;
   prNumber?: string | null;
   poType?: string | null;
   poNumber?: string | null;
-  grNumber?: string | null; // ⚠️ Tetap di type (untuk compatibility API), tapi tidak ditampilkan
+  grNumber?: string | null;
 
   description: string;
   qty: number;
@@ -43,8 +42,8 @@ export type TransactionRow = {
 
 type Props = {
   rows: TransactionRow[];
-  onEdit: (id: string) => void;        // UUID
-  onDelete: (id: string) => Promise<boolean>; // UUID
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => Promise<boolean>;
 };
 
 type SortState = {
@@ -70,6 +69,38 @@ function formatDate(val?: string | null): string {
   return new Date(val).toLocaleDateString("id-ID");
 }
 
+function StatusBadge({ status }: { status: string }) {
+  const base =
+    "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold";
+
+  switch (status) {
+    case "Approved":
+      return (
+        <span className={`${base} bg-emerald-100 text-emerald-700`}>
+          Approved
+        </span>
+      );
+    case "Pending":
+      return (
+        <span className={`${base} bg-amber-100 text-amber-700`}>
+          Pending
+        </span>
+      );
+    case "In Progress":
+      return (
+        <span className={`${base} bg-blue-100 text-blue-700`}>
+          In Progress
+        </span>
+      );
+    default:
+      return (
+        <span className={`${base} bg-gray-100 text-gray-600`}>
+          {status}
+        </span>
+      );
+  }
+}
+
 /**
  * =========================================
  * COMPONENT
@@ -84,6 +115,8 @@ export default function TransactionTable({
     key: null,
     direction: null,
   });
+
+  console.log("🔥 STICKY TABLE - GAP FIXED VERSION!");
 
   function handleSort(key: keyof TransactionRow) {
     setSort((prev) => {
@@ -136,8 +169,9 @@ export default function TransactionTable({
     return (
       <th
         onClick={() => handleSort(column)}
-        className={`px-4 py-3 text-sm font-semibold text-gray-700 cursor-pointer
-        border border-gray-200 bg-slate-50 select-none whitespace-nowrap
+        className={`px-4 py-3 text-xs font-semibold uppercase tracking-wide
+        text-gray-600 bg-gray-50 border-b border-gray-200
+        cursor-pointer select-none whitespace-nowrap
         ${align === "right" ? "text-right" : "text-left"}`}
       >
         <span className="inline-flex items-center">
@@ -150,25 +184,61 @@ export default function TransactionTable({
 
   if (rows.length === 0) {
     return (
-      <div className="py-8 text-center text-sm text-gray-500">
+      <div className="py-12 text-center text-sm text-gray-500 bg-white border border-gray-200 rounded-xl shadow-sm">
         Tidak ada data transaksi
       </div>
     );
   }
 
   return (
-    <ScrollableTable minWidth={2200}>
-      <div className="w-full bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <table className="w-full border-collapse">
+    <div className="w-full bg-white border border-gray-200 rounded-xl shadow-sm">
+      <div className="w-full overflow-x-auto">
+        <table className="w-full text-sm" style={{ minWidth: "2200px" }}>
           <thead>
             <tr>
-              <Th label="Transaction ID" column="displayId" />
-              <Th label="Budget ID" column="budgetPlanDisplayId" />
+              {/* 🔥 STICKY: Transaction ID */}
+              <th
+                onClick={() => handleSort("displayId")}
+                style={{
+                  position: "sticky",
+                  left: 0,
+                  zIndex: 30,
+                  backgroundColor: "#f9fafb",
+                  minWidth: "150px",
+                  width: "150px",
+                }}
+                className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600 border-b border-gray-200 border-r-2 border-r-gray-300 cursor-pointer select-none whitespace-nowrap text-left"
+              >
+                <span className="inline-flex items-center">
+                  Transaction ID
+                  <SortIcon column="displayId" />
+                </span>
+              </th>
+
+              {/* 🔥 STICKY: Budget ID - ADJUSTED OFFSET */}
+              <th
+                onClick={() => handleSort("budgetPlanDisplayId")}
+                style={{
+                  position: "sticky",
+                  left: 150,
+                  zIndex: 30,
+                  backgroundColor: "#f9fafb",
+                  minWidth: "130px",
+                  width: "130px",
+                }}
+                className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600 border-b border-gray-200 border-r-2 border-r-gray-300 cursor-pointer select-none whitespace-nowrap text-left"
+              >
+                <span className="inline-flex items-center">
+                  Budget ID
+                  <SortIcon column="budgetPlanDisplayId" />
+                </span>
+              </th>
+
+              {/* REGULAR COLUMNS */}
               <Th label="Vendor" column="vendor" />
               <Th label="Requester" column="requester" />
               <Th label="PR" column="prNumber" />
               <Th label="PO" column="poNumber" />
-              {/* ❌ KOLOM GR DIHAPUS */}
               <Th label="Description" column="description" />
               <Th label="QTY" column="qty" align="right" />
               <Th label="Amount" column="amount" align="right" />
@@ -179,48 +249,107 @@ export default function TransactionTable({
               <Th label="CC / LOB" column="ccLob" />
               <Th label="COA" column="coa" />
               <Th label="Status" column="status" />
-              <th className="px-4 py-3 text-sm font-semibold text-center border border-gray-200 bg-slate-50 whitespace-nowrap">
+              
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600 bg-gray-50 border-b border-gray-200 text-center whitespace-nowrap">
                 Action
               </th>
             </tr>
           </thead>
 
           <tbody>
-            {sortedRows.map((row, index) => (
+            {sortedRows.map((row) => (
               <tr
                 key={row.id}
-                className={index % 2 === 0 ? "bg-white" : "bg-slate-50"}
+                className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
               >
-                <td className="px-4 py-3 border border-gray-200 font-mono whitespace-nowrap">
+                {/* 🔥 STICKY: Transaction ID */}
+                <td
+                  style={{
+                    position: "sticky",
+                    left: 0,
+                    zIndex: 20,
+                    backgroundColor: "white",
+                    minWidth: "150px",
+                    width: "150px",
+                  }}
+                  className="px-4 py-3 font-mono text-gray-900 whitespace-nowrap border-r-2 border-r-gray-200"
+                >
                   {row.displayId}
                 </td>
-                <td className="px-4 py-3 border border-gray-200 font-mono whitespace-nowrap">
+
+                {/* 🔥 STICKY: Budget ID - ADJUSTED OFFSET */}
+                <td
+                  style={{
+                    position: "sticky",
+                    left: 150,
+                    zIndex: 20,
+                    backgroundColor: "white",
+                    minWidth: "130px",
+                    width: "130px",
+                  }}
+                  className="px-4 py-3 font-mono text-gray-700 whitespace-nowrap border-r-2 border-r-gray-200"
+                >
                   {row.budgetPlanDisplayId ?? "-"}
                 </td>
-                <td className="px-4 py-3 border border-gray-200 whitespace-nowrap">{row.vendor}</td>
-                <td className="px-4 py-3 border border-gray-200 whitespace-nowrap">{row.requester}</td>
-                <td className="px-4 py-3 border border-gray-200 whitespace-nowrap">{row.prNumber ?? "-"}</td>
-                <td className="px-4 py-3 border border-gray-200 whitespace-nowrap">{row.poNumber ?? "-"}</td>
-                {/* ❌ BARIS GR DIHAPUS */}
-                <td className="px-4 py-3 border border-gray-200 min-w-[250px]">{row.description}</td>
-                <td className="px-4 py-3 border border-gray-200 text-right whitespace-nowrap">{row.qty}</td>
-                <td className="px-4 py-3 border border-gray-200 text-right whitespace-nowrap">
+
+                {/* REGULAR COLUMNS */}
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {row.vendor}
+                </td>
+
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {row.requester}
+                </td>
+
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {row.prNumber ?? "-"}
+                </td>
+
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {row.poNumber ?? "-"}
+                </td>
+
+                <td className="px-4 py-3 min-w-[250px] text-gray-700">
+                  {row.description}
+                </td>
+
+                <td className="px-4 py-3 text-right font-medium whitespace-nowrap">
+                  {row.qty}
+                </td>
+
+                <td className="px-4 py-3 text-right font-semibold text-gray-900 whitespace-nowrap">
                   {formatCurrency(row.amount)}
                 </td>
-                <td className="px-4 py-3 border border-gray-200 whitespace-nowrap">
+
+                <td className="px-4 py-3 whitespace-nowrap">
                   {formatDate(row.submissionDate)}
                 </td>
-                <td className="px-4 py-3 border border-gray-200 whitespace-nowrap">
+
+                <td className="px-4 py-3 whitespace-nowrap">
                   {formatDate(row.approvedDate)}
                 </td>
-                <td className="px-4 py-3 border border-gray-200 whitespace-nowrap">
+
+                <td className="px-4 py-3 whitespace-nowrap">
                   {formatDate(row.deliveryDate)}
                 </td>
-                <td className="px-4 py-3 border border-gray-200 whitespace-nowrap">{row.oc ?? "-"}</td>
-                <td className="px-4 py-3 border border-gray-200 whitespace-nowrap">{row.ccLob ?? "-"}</td>
-                <td className="px-4 py-3 border border-gray-200 font-mono whitespace-nowrap">{row.coa ?? "-"}</td>
-                <td className="px-4 py-3 border border-gray-200 whitespace-nowrap">{row.status}</td>
-                <td className="px-4 py-3 border border-gray-200 text-center whitespace-nowrap">
+
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {row.oc ?? "-"}
+                </td>
+
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {row.ccLob ?? "-"}
+                </td>
+
+                <td className="px-4 py-3 font-mono whitespace-nowrap">
+                  {row.coa ?? "-"}
+                </td>
+
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <StatusBadge status={row.status} />
+                </td>
+
+                <td className="px-4 py-3 text-center whitespace-nowrap">
                   <TransactionActionCell
                     onEdit={() => onEdit(row.id)}
                     onDelete={() => onDelete(row.id)}
@@ -231,6 +360,6 @@ export default function TransactionTable({
           </tbody>
         </table>
       </div>
-    </ScrollableTable>
+    </div>
   );
 }

@@ -21,7 +21,8 @@ export async function GET(
             id: true,
             budgetDisplayId: true,
             itemCode: true,
-            budgetRemainingAmount: true, // ✅ TAMBAH INI
+            noCapex: true,  // ✅ CAMELCASE!
+            budgetRemainingAmount: true,
           },
         },
       },
@@ -40,12 +41,11 @@ export async function GET(
 
       budgetPlanCapexId: trx.budgetPlanCapexId,
       budgetPlanDisplayId: trx.budgetPlan.budgetDisplayId,
-      budgetRemainingAmount: trx.budgetPlan.budgetRemainingAmount.toString(), // ✅ TAMBAH INI
+      budgetRemainingAmount: trx.budgetPlan.budgetRemainingAmount.toString(),
 
       vendor: trx.vendor,
       requester: trx.requester,
       
-      // ✅ TAMBAH SEMUA FIELD YANG KURANG
       projectCode: trx.projectCode,
       noUi: trx.noUi,
       
@@ -62,7 +62,7 @@ export async function GET(
 
       submissionDate: trx.submissionDate,
       approvedDate: trx.approvedDate,
-      deliveryStatus: trx.deliveryStatus, // ✅ GANTI deliveryDate jadi deliveryStatus
+      deliveryStatus: trx.deliveryStatus,
 
       oc: trx.oc,
       ccLob: trx.ccLob,
@@ -73,7 +73,8 @@ export async function GET(
         id: trx.budgetPlan.id,
         budgetDisplayId: trx.budgetPlan.budgetDisplayId,
         itemCode: trx.budgetPlan.itemCode,
-        budgetRemainingAmount: trx.budgetPlan.budgetRemainingAmount.toString(), // ✅ TAMBAH INI
+        noCapex: trx.budgetPlan.noCapex,  // ✅ CAMELCASE!
+        budgetRemainingAmount: trx.budgetPlan.budgetRemainingAmount.toString(),
       },
     });
   } catch (err) {

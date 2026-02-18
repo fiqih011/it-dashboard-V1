@@ -37,7 +37,7 @@ export default function SearchableSelect({
 
   const displayValue = open ? query : value ?? "";
 
-  // ✅ Clear handler for X button
+  // Clear handler for X button
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
     onChange(undefined);
@@ -48,7 +48,7 @@ export default function SearchableSelect({
   return (
     <div ref={ref} className="relative">
       <div
-        className="flex items-center border border-gray-300 rounded-md h-9 px-3 bg-white cursor-text"
+        className="flex items-center border border-gray-300 rounded-md h-9 px-3 bg-white cursor-text hover:border-gray-400 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-all"
         onClick={() => setOpen(true)}
       >
         <input
@@ -61,7 +61,7 @@ export default function SearchableSelect({
           className="flex-1 text-sm outline-none bg-transparent"
         />
         
-        {/* ✅ Clear button (X) - shows when value exists and dropdown is closed */}
+        {/* Clear button (X) - shows when value exists and dropdown is closed */}
         {value && !open && (
           <button
             onClick={handleClear}
@@ -73,20 +73,20 @@ export default function SearchableSelect({
           </button>
         )}
         
-        <ChevronDown className="h-4 w-4 text-gray-400 ml-2 flex-shrink-0" />
+        <ChevronDown className={`h-4 w-4 text-gray-400 ml-2 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </div>
 
       {open && filtered.length > 0 && (
-        <div className="absolute z-20 mt-1 w-full max-h-48 overflow-auto rounded-md border bg-white shadow-lg">
-          {filtered.map((opt) => (
+        <div className="absolute z-[9999] mt-1 w-full max-h-48 overflow-auto rounded-md border border-gray-200 bg-white shadow-xl">
+          {filtered.map((opt, idx) => (
             <div
-              key={opt}
+              key={`${opt}-${idx}`}
               onClick={() => {
                 onChange(opt);
                 setOpen(false);
                 setQuery("");
               }}
-              className="px-3 py-2 text-sm hover:bg-slate-100 cursor-pointer"
+              className="px-3 py-2 text-sm hover:bg-indigo-50 cursor-pointer transition-colors"
             >
               {opt}
             </div>

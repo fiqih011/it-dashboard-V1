@@ -13,10 +13,8 @@ export default function Header() {
         IT Budgeting Dashboard
       </h1>
 
-      {/* Right Side - Conditional based on auth */}
       <div className="flex items-center gap-3">
         {session ? (
-          // Authenticated - Show user info & logout
           <>
             <div className="flex items-center gap-2 text-sm">
               <User className="w-4 h-4 text-gray-600" />
@@ -27,6 +25,7 @@ export default function Header() {
                 ({(session.user as any).role})
               </span>
             </div>
+
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
               className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
@@ -36,7 +35,6 @@ export default function Header() {
             </button>
           </>
         ) : (
-          // Not authenticated - Show login button
           <Link
             href="/login"
             className="px-4 py-1.5 bg-gradient-to-r from-violet-600 to-blue-600 text-white text-sm font-medium rounded-md hover:from-violet-700 hover:to-blue-700 transition-all"

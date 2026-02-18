@@ -3,13 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import TransactionFilter from "@/components/filter/TransactionFilter";
+import TransactionCapexFilter from "@/components/filter/TransactionCapexFilter";
 import {
-  TransactionFilterValue,
   FilterFieldConfig,
   FilterOption,
 } from "@/components/filter/types";
-import { transactionFilterConfig } from "@/components/filter/transaction.config";
+import {
+  TransactionCapexFilterValue,
+  transactionCapexFilterConfig,
+} from "@/components/filter/transaction-capex.config";
 
 import PaginationBar from "@/components/table/PaginationBar";
 import TransactionCapexTable, {
@@ -24,20 +26,14 @@ import { showError, showSuccess } from "@/lib/swal";
  * HELPERS
  * =========================================
  */
-function toOptions(values: Array<string | null | undefined>): FilterOption[] {
-  return Array.from(
-    new Set(
-      values
-        .filter((v): v is string => !!v && v.trim() !== "")
-        .map((v) => v.trim())
-    )
-  )
-    .sort()
-    .map((v) => ({ label: v, value: v }));
+function toOptions(values: string[]): FilterOption[] {
+  return values.map((v) => ({ label: v, value: v }));
 }
 
 export default function TransactionsCapexPage() {
   const router = useRouter();
+
+  const currentYear = new Date().getFullYear().toString();
 
   // =========================
   // TABLE DATA
@@ -46,15 +42,15 @@ export default function TransactionsCapexPage() {
   const [loading, setLoading] = useState(false);
 
   // =========================
-  // ✅ STABLE FILTER OPTIONS (DARI FETCH PERTAMA)
+  // FILTER OPTIONS (FROM API)
   // =========================
-  const [stableOptions, setStableOptions] = useState<{
-    years: FilterOption[];
-    transactionIds: FilterOption[];
-    budgetPlanIds: FilterOption[];
-    vendors: FilterOption[];
-    requesters: FilterOption[];
-    descriptions: FilterOption[];
+  const [filterOptions, setFilterOptions] = useState<{
+    years: string[];
+    transactionIds: string[];
+    budgetPlanIds: string[];
+    vendors: string[];
+    requesters: string[];
+    descriptions: string[];
   }>({
     years: [],
     transactionIds: [],
@@ -68,9 +64,14 @@ export default function TransactionsCapexPage() {
   // FILTER STATE
   // =========================
   const [draftFilters, setDraftFilters] =
-    useState<TransactionFilterValue>({});
+    useState<TransactionCapexFilterValue>({
+      year: currentYear, // DEFAULT TAHUN BERJALAN
+    });
+
   const [appliedFilters, setAppliedFilters] =
-    useState<TransactionFilterValue>({});
+    useState<TransactionCapexFilterValue>({
+      year: currentYear,
+    });
 
   // =========================
   // PAGINATION
@@ -87,10 +88,49 @@ export default function TransactionsCapexPage() {
 
   /**
    * =========================================
-   * ✅ FETCH TABLE DATA (DENGAN STABLE OPTIONS)
+   * STATS (BERDASARKAN DATA TABEL)
    * =========================================
    */
-  async function fetchTableData(isInitial = false) {
+  const stats = useMemo(() => {
+    const approved = rows.filter((r) => r.status === "Approved").length;
+    const pending = rows.filter((r) => r.status === "Pending").length;
+    const inProgress = rows.filter((r) => r.status === "In Progress").length;
+
+    return {
+      total,
+      approved,
+      pending,
+      inProgress,
+    };
+  }, [rows, total]);
+
+  /**
+   * =========================================
+   * FETCH FILTER OPTIONS (BASED ON YEAR)
+   * =========================================
+   */
+  async function fetchFilterOptions(year?: string) {
+    try {
+      const url = year
+        ? `/api/transaction/capex/filter-options?year=${year}`
+        : `/api/transaction/capex/filter-options`;
+
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Gagal mengambil filter options");
+
+      const json = await res.json();
+      setFilterOptions(json);
+    } catch (err) {
+      console.error("Filter options error:", err);
+    }
+  }
+
+  /**
+   * =========================================
+   * FETCH TABLE DATA
+   * =========================================
+   */
+  async function fetchTableData() {
     try {
       setLoading(true);
 
@@ -99,7 +139,6 @@ export default function TransactionsCapexPage() {
         pageSize: String(pageSize),
       });
 
-      // ✅ Apply filters
       Object.entries(appliedFilters).forEach(([key, value]) => {
         if (value && value.trim() !== "") {
           params.set(key, value);
@@ -107,31 +146,11 @@ export default function TransactionsCapexPage() {
       });
 
       const res = await fetch(`/api/transaction/capex?${params.toString()}`);
-      if (!res.ok) throw new Error("Gagal mengambil data transaksi CAPEX");
+      if (!res.ok) throw new Error("Gagal mengambil data transaksi");
 
       const json = await res.json();
       setRows(json.data ?? []);
       setTotal(json.total ?? 0);
-
-      // ✅ POLA BUDGET PLAN: Simpan options hanya dari fetch pertama
-      if (isInitial && json.data && json.data.length > 0) {
-        const data = json.data as TransactionCapexRow[];
-        
-        setStableOptions({
-          years: toOptions(
-            data.map((r) =>
-              r.submissionDate
-                ? new Date(r.submissionDate).getFullYear().toString()
-                : null
-            )
-          ),
-          transactionIds: toOptions(data.map((r) => r.transactionDisplayId)),
-          budgetPlanIds: toOptions(data.map((r) => r.budgetPlanCapexId)),
-          vendors: toOptions(data.map((r) => r.vendor)),
-          requesters: toOptions(data.map((r) => r.requester)),
-          descriptions: toOptions(data.map((r) => r.description)),
-        });
-      }
     } catch (err) {
       showError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -139,53 +158,79 @@ export default function TransactionsCapexPage() {
     }
   }
 
-  // ✅ Initial fetch dengan stable options
+  /**
+   * =========================================
+   * INITIAL LOAD
+   * =========================================
+   */
   useEffect(() => {
-    fetchTableData(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchFilterOptions(currentYear);
+    fetchTableData();
+    // eslint-disable-next-line
   }, []);
 
-  // ✅ Subsequent fetches (pagination, filter) TANPA update options
+  /**
+   * =========================================
+   * REFRESH TABLE ON FILTER CHANGE
+   * =========================================
+   */
   useEffect(() => {
-    if (stableOptions.years.length > 0) {
-      fetchTableData(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchTableData();
+    // eslint-disable-next-line
   }, [page, pageSize, appliedFilters]);
 
   /**
    * =========================================
-   * ✅ FILTER CONFIG (GUNAKAN STABLE OPTIONS)
+   * REFRESH OPTIONS WHEN YEAR DRAFT CHANGED
    * =========================================
    */
-  const filterFields: FilterFieldConfig<TransactionFilterValue>[] = useMemo(() => {
-    return transactionFilterConfig.map((field) => {
-      if (field.type !== "select") return field;
+  useEffect(() => {
+    fetchFilterOptions(draftFilters.year);
+  }, [draftFilters.year]);
 
-      switch (field.key) {
-        case "year":
-          return { ...field, options: stableOptions.years };
+  /**
+   * =========================================
+   * FILTER CONFIG
+   * =========================================
+   */
+  const filterFields: FilterFieldConfig<TransactionCapexFilterValue>[] =
+    useMemo(() => {
+      return transactionCapexFilterConfig.map((field) => {
+        if (field.type !== "select") return field;
 
-        case "transactionDisplayId":
-          return { ...field, options: stableOptions.transactionIds };
+        switch (field.key) {
+          case "year":
+            return { ...field, options: toOptions(filterOptions.years) };
 
-        case "budgetPlanDisplayId":
-          return { ...field, options: stableOptions.budgetPlanIds };
+          case "transactionDisplayId":
+            return {
+              ...field,
+              options: toOptions(filterOptions.transactionIds),
+            };
 
-        case "vendor":
-          return { ...field, options: stableOptions.vendors };
+          case "budgetPlanDisplayId":
+            return {
+              ...field,
+              options: toOptions(filterOptions.budgetPlanIds),
+            };
 
-        case "requester":
-          return { ...field, options: stableOptions.requesters };
+          case "vendor":
+            return { ...field, options: toOptions(filterOptions.vendors) };
 
-        case "description":
-          return { ...field, options: stableOptions.descriptions };
+          case "requester":
+            return { ...field, options: toOptions(filterOptions.requesters) };
 
-        default:
-          return field;
-      }
-    });
-  }, [stableOptions]);
+          case "description":
+            return {
+              ...field,
+              options: toOptions(filterOptions.descriptions),
+            };
+
+          default:
+            return field;
+        }
+      });
+    }, [filterOptions]);
 
   /**
    * =========================================
@@ -193,7 +238,10 @@ export default function TransactionsCapexPage() {
    * =========================================
    */
   async function handleDelete(id: string): Promise<boolean> {
-    const res = await fetch(`/api/transaction/capex/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/transaction/capex/${id}`, {
+      method: "DELETE",
+    });
+
     if (!res.ok) {
       const err = await res.json();
       showError(err.error ?? "Gagal menghapus transaksi");
@@ -201,7 +249,8 @@ export default function TransactionsCapexPage() {
     }
 
     showSuccess("Transaksi CAPEX berhasil dihapus");
-    fetchTableData(false);
+    fetchTableData();
+    fetchFilterOptions(draftFilters.year);
     return true;
   }
 
@@ -210,7 +259,7 @@ export default function TransactionsCapexPage() {
     setOpenEdit(true);
   }
 
-  if (loading && stableOptions.years.length === 0) {
+  if (loading && rows.length === 0) {
     return <div className="p-6">Loading transaksi CAPEX…</div>;
   }
 
@@ -226,7 +275,38 @@ export default function TransactionsCapexPage() {
         <h1 className="text-xl font-semibold">Tabel Transaksi CAPEX</h1>
       </div>
 
-      <TransactionFilter
+      {/* ================= STATS CARDS ================= */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+          <p className="text-sm text-gray-500">Total Transaksi</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">
+            {stats.total}
+          </p>
+        </div>
+
+        <div className="bg-emerald-50 border border-emerald-100 rounded-xl shadow-sm p-5">
+          <p className="text-sm text-emerald-700">Approved</p>
+          <p className="text-2xl font-bold text-emerald-800 mt-1">
+            {stats.approved}
+          </p>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-100 rounded-xl shadow-sm p-5">
+          <p className="text-sm text-amber-700">Pending</p>
+          <p className="text-2xl font-bold text-amber-800 mt-1">
+            {stats.pending}
+          </p>
+        </div>
+
+        <div className="bg-blue-50 border border-blue-100 rounded-xl shadow-sm p-5">
+          <p className="text-sm text-blue-700">In Progress</p>
+          <p className="text-2xl font-bold text-blue-800 mt-1">
+            {stats.inProgress}
+          </p>
+        </div>
+      </div>
+
+      <TransactionCapexFilter
         value={draftFilters}
         onChange={setDraftFilters}
         onSearch={() => {
@@ -234,8 +314,8 @@ export default function TransactionsCapexPage() {
           setAppliedFilters(draftFilters);
         }}
         onReset={() => {
-          setDraftFilters({});
-          setAppliedFilters({});
+          setDraftFilters({ year: currentYear });
+          setAppliedFilters({ year: currentYear });
           setPage(1);
         }}
         fields={filterFields}
@@ -265,7 +345,10 @@ export default function TransactionsCapexPage() {
           setOpenEdit(false);
           setSelectedId(null);
         }}
-        onSuccess={() => fetchTableData(false)}
+        onSuccess={() => {
+          fetchTableData();
+          fetchFilterOptions(draftFilters.year);
+        }}
       />
     </div>
   );
