@@ -1,8 +1,8 @@
 "use client";
 
+import { X } from "lucide-react";
 import BudgetPlanForm from "@/components/forms/BudgetPlanForm";
 import type { BudgetPlanOpex } from "@prisma/client";
-import { X } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -11,15 +11,9 @@ type Props = {
   onSuccess: () => void;
 };
 
-export default function EditBudgetPlanModal({
-  open,
-  data,
-  onClose,
-  onSuccess,
-}: Props) {
+export default function EditBudgetPlanModal({ open, data, onClose, onSuccess }: Props) {
   if (!open) return null;
 
-  // 🔑 ADAPTER: Prisma bigint → Form number (TIDAK DIUBAH)
   const formData = {
     id: data.id,
     displayId: data.displayId,
@@ -27,7 +21,6 @@ export default function EditBudgetPlanModal({
     coa: data.coa,
     category: data.category,
     component: data.component,
-
     budgetPlanAmount: Number(data.budgetPlanAmount),
     budgetRealisasiAmount: Number(data.budgetRealisasiAmount),
     budgetRemainingAmount: Number(data.budgetRemainingAmount),
@@ -35,36 +28,33 @@ export default function EditBudgetPlanModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 flex flex-col">
-        {/* =====================================================
-            HEADER — DISERAGAMKAN (STYLE ONLY)
-        ===================================================== */}
-        <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-5 rounded-t-2xl border-b border-slate-600">
+      <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col">
+        {/* HEADER */}
+        <div className="bg-gradient-to-r from-indigo-700 to-indigo-600 px-6 py-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white">
-              Edit Budget Plan OPEX
-            </h2>
+            <div>
+              <h2 className="text-lg font-bold text-white">Edit Budget Plan OPEX</h2>
+              <p className="text-sm text-indigo-200 mt-0.5">{data.displayId}</p>
+            </div>
             <button
               type="button"
               onClick={onClose}
-              className="text-slate-300 hover:text-white transition-colors"
+              className="text-indigo-200 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* =====================================================
-            BODY — TIDAK DIUBAH
-        ===================================================== */}
+        {/* BODY */}
         <div className="p-6">
           <BudgetPlanForm
             mode="edit"
             initialData={formData}
-            onCancel={onClose} // ✅ Cancel → close modal
+            onCancel={onClose}
             onSuccess={() => {
               onSuccess();
-              onClose();       // ✅ Save → close modal
+              onClose();
             }}
           />
         </div>

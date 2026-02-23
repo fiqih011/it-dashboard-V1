@@ -29,9 +29,6 @@ export default function EditTransactionModal({
     remaining: number;
   } | null>(null);
 
-  /* ===============================
-   * LOAD TRANSACTION + BUDGET
-   * =============================== */
   useEffect(() => {
     if (!open || !transactionId) return;
 
@@ -39,31 +36,22 @@ export default function EditTransactionModal({
       try {
         setLoading(true);
 
-        // 1. FETCH TRANSACTION (by UUID)
         const txRes = await fetch(`/api/transaction/opex/${transactionId}`);
-        if (!txRes.ok) throw new Error("Gagal memuat data transaksi");
+        if (!txRes.ok) throw new Error("Failed to load transaction data");
 
         const txData = await txRes.json();
-        console.log("📥 Transaction data:", txData);
 
-        // 2. FETCH BUDGET (by UUID dari budgetPlanOpexId)
         const budgetUuid = txData.budgetPlanOpexId || txData.budgetPlanId || txData.budgetId;
         
-        console.log("🔑 Budget UUID from transaction:", budgetUuid);
-        console.log("🔍 Transaction keys:", Object.keys(txData));
-        
         if (!budgetUuid) {
-          console.error("❌ Available transaction data:", txData);
-          throw new Error("Budget Plan ID tidak ditemukan di data transaksi");
+          throw new Error("Budget Plan ID not found in transaction data");
         }
 
         const budgetRes = await fetch(`/api/budget/opex/${budgetUuid}`);
-        if (!budgetRes.ok) throw new Error("Gagal memuat data budget");
+        if (!budgetRes.ok) throw new Error("Failed to load budget data");
 
         const budgetData = await budgetRes.json();
-        console.log("📥 Budget data:", budgetData);
 
-        // 3. SET BUDGET INFO
         setBudgetInfo({
           displayId: budgetData.displayId,
           coa: budgetData.coa,
@@ -71,10 +59,9 @@ export default function EditTransactionModal({
           remaining: Number(budgetData.budgetRemainingAmount || 0),
         });
 
-        // 4. MAP TRANSACTION DATA KE FORM
         const mapped: TransactionFormData = {
-          transactionId: txData.displayId, // TRX-OP-25-0001
-          budgetId: budgetData.displayId,  // ✅ OP-250001 (dari budget)
+          transactionId: txData.displayId,
+          budgetId: budgetData.displayId,
           
           vendor: txData.vendor || "",
           requester: txData.requester || "",
@@ -97,18 +84,17 @@ export default function EditTransactionModal({
             ? new Date(txData.deliveryDate).toISOString().split("T")[0]
             : "",
           
-          opexCapex: txData.opexCapex || "OPEX", // ✅ Dari database
+          opexCapex: txData.opexCapex || "OPEX",
           cc: txData.ccLob || "",
-          coa: budgetData.coa || "", // ✅ Dari budget
+          coa: budgetData.coa || "",
           oc: txData.oc || "",
           status: txData.status || "",
           notes: txData.notes || "",
         };
 
-        console.log("✅ Mapped form data:", mapped);
         setFormData(mapped);
       } catch (err) {
-        console.error("❌ Load error:", err);
+        console.error("Load error:", err);
         showError(err instanceof Error ? err.message : "Unknown error");
         onClose();
       } finally {
@@ -119,9 +105,6 @@ export default function EditTransactionModal({
     loadData();
   }, [open, transactionId, onClose]);
 
-  /* ===============================
-   * SUBMIT
-   * =============================== */
   async function handleSubmit(payload: TransactionFormData) {
     if (!transactionId) return;
 
@@ -136,10 +119,10 @@ export default function EditTransactionModal({
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error ?? "Gagal update transaksi");
+        throw new Error(err.error ?? "Failed to update transaction");
       }
 
-      showSuccess("Transaksi berhasil diperbarui");
+      showSuccess("Transaction updated successfully");
       onClose();
       onSuccess();
     } catch (err) {
@@ -153,88 +136,64 @@ export default function EditTransactionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col border border-gray-200">
-        {/* 
-          =====================================================
-          HEADER
-          =====================================================
-        */}
-        <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-4 rounded-t-2xl border-b border-slate-600">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col border border-gray-200">
+        <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-5 rounded-t-2xl border-b border-slate-600">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h2 className="text-lg font-bold text-white">
-                Edit Transaksi OPEX
+              <h2 className="text-xl font-bold text-white">
+                Edit OPEX Transaction
               </h2>
-              <p className="text-xs text-slate-200 mt-0.5">
-                Perbarui data transaksi
+              <p className="text-sm text-slate-200 mt-1">
+                Update operational expenditure transaction data
               </p>
 
-              {/* Budget Info - Compact */}
               {budgetInfo && formData && (
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs text-slate-100">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-300">Transaction ID:</span>
-                    <span className="font-semibold font-mono">
-                      {formData.transactionId}
-                    </span>
+                <div className="mt-4 bg-slate-600/30 rounded-lg px-4 py-3 border border-slate-500/50">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-300 font-medium">Budget OPEX:</span>
+                      <span className="font-bold font-mono text-white">
+                        {budgetInfo.displayId}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-300 font-medium">COA:</span>
+                      <span className="font-bold font-mono text-white">
+                        {budgetInfo.coa}
+                      </span>
+                    </div>
+                    <div className="col-span-2 flex items-center gap-2">
+                      <span className="text-slate-300 font-medium">Component:</span>
+                      <span className="font-semibold text-white">
+                        {budgetInfo.component}
+                      </span>
+                    </div>
+                    <div className="col-span-2 flex items-center gap-2 pt-1 border-t border-slate-500/50">
+                      <span className="text-slate-300 font-medium">Remaining Budget:</span>
+                      <span className="font-bold text-green-300 text-base">
+                        Rp {budgetInfo.remaining.toLocaleString("id-ID")}
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-slate-400">|</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-300">Budget ID:</span>
-                    <span className="font-semibold font-mono">
-                      {budgetInfo.displayId}
-                    </span>
-                  </div>
-                  <span className="text-slate-400">|</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-300">COA:</span>
-                    <span className="font-semibold font-mono">
-                      {budgetInfo.coa}
-                    </span>
-                  </div>
-                  <span className="text-slate-400">|</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-300">Description:</span>
-                    <span className="font-semibold truncate max-w-xs">
-                      {formData.description || "-"}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Budget Summary */}
-              {budgetInfo && (
-                <div className="flex gap-4 mt-2 text-xs text-slate-100">
-                  <span>
-                    Remaining Budget:{" "}
-                    <strong className="text-green-300">
-                      Rp {budgetInfo.remaining.toLocaleString("id-ID")}
-                    </strong>
-                  </span>
                 </div>
               )}
             </div>
 
             <button
               onClick={onClose}
-              className="text-slate-300 hover:text-white transition-colors"
+              className="text-slate-300 hover:text-white transition-colors ml-4"
             >
               <X className="w-6 h-6" />
             </button>
           </div>
         </div>
 
-        {/* 
-          =====================================================
-          BODY - SCROLLABLE FORM
-          =====================================================
-        */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
           {loading || !formData ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-slate-300 border-t-slate-600 mb-3"></div>
-                <p className="text-slate-500 text-sm">Memuat data...</p>
+                <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-slate-300 border-t-slate-600 mb-4"></div>
+                <p className="text-slate-500 text-sm font-medium">Loading transaction data...</p>
               </div>
             </div>
           ) : (

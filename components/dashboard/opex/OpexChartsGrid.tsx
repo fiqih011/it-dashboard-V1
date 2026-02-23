@@ -7,11 +7,15 @@ import OpexStatusDonutChart, {
 import OpexDistributionChart, {
   DistributionChartData,
 } from "./OpexDistributionChart";
+import OpexGroupedBarChart, {
+  OpexGroupedBarItem,
+} from "./OpexGroupedBarChart";
 
 type Props = {
   coa: string;
   distributionData: DistributionChartData[] | null;
   statusData: BudgetStatusData | null;
+  groupedBarData?: OpexGroupedBarItem[] | null; // NEW
   loading?: boolean;
   error?: string | null;
 };
@@ -20,12 +24,27 @@ export default function OpexChartsGrid({
   coa,
   distributionData,
   statusData,
+  groupedBarData = null,
   loading = false,
   error = null,
 }: Props) {
+  // If COA selected → show grouped chart
+  if (coa && groupedBarData) {
+    return (
+      <div className="w-full">
+        <OpexGroupedBarChart
+          data={groupedBarData}
+          coa={coa}
+          loading={loading}
+          error={error}
+        />
+      </div>
+    );
+  }
+
+  // Default view → 2 old charts
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Left: Donut Chart (1 column) */}
       <div className="lg:col-span-1">
         <OpexStatusDonutChart
           data={statusData}
@@ -35,7 +54,6 @@ export default function OpexChartsGrid({
         />
       </div>
 
-      {/* Right: Distribution Bars (2 columns) */}
       <div className="lg:col-span-2">
         <OpexDistributionChart
           data={distributionData}

@@ -122,11 +122,11 @@ export async function GET(req: NextRequest) {
         prNumber: trx.prNumber,
         poType: trx.poType,
         poNumber: trx.poNumber,
-        documentGr: trx.documentGr,
+        grNumber: trx.documentGr,  // ✅ FIXED: documentGr → grNumber
 
         description: trx.description,
         qty: trx.qty,
-        amount: trx.amount.toString(),
+        amount: Number(trx.amount),  // ✅ FIXED: Convert BigInt to number
 
         submissionDate: trx.submissionDate,
         approvedDate: trx.approvedDate,

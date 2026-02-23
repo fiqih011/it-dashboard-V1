@@ -6,17 +6,13 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export default function AppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(false);
 
   if (!session) {
     return (
-      <div className="flex flex-col min-h-screen bg-slate-50">
+      <div className="flex flex-col min-h-screen bg-gray-50">
         <Header />
         <main className="flex-1 p-6">{children}</main>
       </div>
@@ -24,20 +20,20 @@ export default function AppLayout({
   }
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-gray-50">
       {/* SIDEBAR WRAPPER */}
-      <div className="relative flex">
+      <div className="relative flex flex-shrink-0">
         <Sidebar collapsed={collapsed} />
 
-        {/* TOGGLE BUTTON (EDGE STICKY) */}
+        {/* TOGGLE BUTTON */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className={`absolute top-4 -right-3 z-50 bg-white border border-gray-200 rounded-md shadow-sm p-1.5 transition-all hover:bg-gray-50`}
+          className="absolute top-5 -right-3 z-50 bg-white border border-gray-200 rounded-full shadow-sm p-1 hover:bg-indigo-50 hover:border-indigo-200 transition-colors"
         >
           {collapsed ? (
-            <ChevronRight className="w-4 h-4 text-gray-700" />
+            <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
           ) : (
-            <ChevronLeft className="w-4 h-4 text-gray-700" />
+            <ChevronLeft className="w-3.5 h-3.5 text-gray-500" />
           )}
         </button>
       </div>

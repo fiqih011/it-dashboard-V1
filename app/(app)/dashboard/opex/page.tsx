@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -12,8 +12,10 @@ import type { BudgetUsageItem } from "@/components/dashboard/BudgetUsageTable";
 import DashboardOpexFilter from "@/components/filter/dashboard/DashboardOpexFilter";
 import OpexGlobalSummary from "@/components/dashboard/opex/OpexGlobalSummary";
 import OpexChartsGrid from "@/components/dashboard/opex/OpexChartsGrid";
+
 import type { DistributionChartData } from "@/components/dashboard/opex/OpexDistributionChart";
 import type { BudgetStatusData } from "@/components/dashboard/opex/OpexStatusDonutChart";
+import type { OpexGroupedBarItem } from "@/components/dashboard/opex/OpexGroupedBarChart";
 
 import type {
   DashboardOpexFilterValue,
@@ -141,7 +143,7 @@ export default function DashboardOpexPage() {
   };
 
   // =====================================================
-  // FETCH TABLE DATA (SOURCE OF TRUTH)
+  // FETCH TABLE DATA
   // =====================================================
   const fetchTableData = async (filters: DashboardOpexFilterValue) => {
     setLoadingTable(true);
@@ -163,6 +165,20 @@ export default function DashboardOpexPage() {
       setLoadingTable(false);
     }
   };
+
+  // =====================================================
+  // NEW: GROUPED BAR DATA MAPPING (STRICT SAFE)
+  // =====================================================
+  const groupedBarData: OpexGroupedBarItem[] | null = useMemo(() => {
+    if (!filterApplied.coa || budgetData.length === 0) return null;
+
+    return budgetData.map((item) => ({
+      code: item.budgetId,
+      name: item.name,
+      totalBudget: item.totalBudget,
+      used: item.used,
+    }));
+  }, [filterApplied.coa, budgetData]);
 
   // =====================================================
   // FETCH CHARTS
@@ -280,7 +296,6 @@ export default function DashboardOpexPage() {
         onReset={handleReset}
       />
 
-      {/* ✅ GLOBAL SUMMARY — SOURCE = TABLE */}
       <OpexGlobalSummary
         data={budgetData}
         loading={loadingTable}
@@ -291,6 +306,7 @@ export default function DashboardOpexPage() {
           coa={filterApplied.coa}
           distributionData={chartDistribution}
           statusData={chartStatus}
+          groupedBarData={groupedBarData}
           loading={loadingCharts}
           error={errorCharts}
         />

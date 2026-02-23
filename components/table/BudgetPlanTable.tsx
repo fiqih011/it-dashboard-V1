@@ -1,17 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  ChevronUp,
-  ChevronDown,
-  ChevronsUpDown,
-} from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import ActionCell from "@/components/table/ActionCell";
 
 export type BudgetPlanRow = {
   id: string;
   displayId: string;
-  coa: string;              // ✅ DITAMBAHKAN
+  coa: string;
   category: string;
   component: string;
   totalBudget: number;
@@ -39,16 +35,8 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-export default function BudgetPlanTable({
-  data,
-  onEdit,
-  onInput,
-  onDetail,
-}: Props) {
-  const [sort, setSort] = useState<SortState>({
-    key: null,
-    direction: null,
-  });
+export default function BudgetPlanTable({ data, onEdit, onInput, onDetail }: Props) {
+  const [sort, setSort] = useState<SortState>({ key: null, direction: null });
 
   function handleSort(key: keyof BudgetPlanRow) {
     setSort((prev) => {
@@ -61,15 +49,11 @@ export default function BudgetPlanTable({
 
   const sortedData = useMemo(() => {
     if (!sort.key || !sort.direction) return data;
-
     return [...data].sort((a, b) => {
       const aVal = a[sort.key!];
       const bVal = b[sort.key!];
-
-      if (typeof aVal === "number" && typeof bVal === "number") {
+      if (typeof aVal === "number" && typeof bVal === "number")
         return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
-      }
-
       return sort.direction === "asc"
         ? String(aVal).localeCompare(String(bVal))
         : String(bVal).localeCompare(String(aVal));
@@ -77,13 +61,11 @@ export default function BudgetPlanTable({
   }, [data, sort]);
 
   function SortIcon({ column }: { column: keyof BudgetPlanRow }) {
-    if (sort.key === column && sort.direction === "asc") {
-      return <ChevronUp className="ml-1 h-4 w-4 text-gray-700" />;
-    }
-    if (sort.key === column && sort.direction === "desc") {
-      return <ChevronDown className="ml-1 h-4 w-4 text-gray-700" />;
-    }
-    return <ChevronsUpDown className="ml-1 h-4 w-4 text-gray-400" />;
+    if (sort.key === column && sort.direction === "asc")
+      return <ChevronUp className="ml-1 h-3 w-3 text-indigo-500" />;
+    if (sort.key === column && sort.direction === "desc")
+      return <ChevronDown className="ml-1 h-3 w-3 text-indigo-500" />;
+    return <ChevronsUpDown className="ml-1 h-3 w-3 text-gray-300" />;
   }
 
   function Th({
@@ -95,12 +77,13 @@ export default function BudgetPlanTable({
     column: keyof BudgetPlanRow;
     align?: "left" | "right";
   }) {
+    const isActive = sort.key === column;
     return (
       <th
         onClick={() => handleSort(column)}
-        className={`px-4 py-3 text-sm font-semibold text-gray-700 cursor-pointer select-none border-r border-gray-200 hover:bg-slate-100 ${
+        className={`px-4 py-2.5 text-xs font-bold tracking-wide uppercase cursor-pointer select-none border-r border-gray-200 transition-colors whitespace-nowrap ${
           align === "right" ? "text-right" : "text-left"
-        }`}
+        } ${isActive ? "text-indigo-600 bg-indigo-50/60" : "text-gray-800 hover:bg-gray-50"}`}
       >
         <span className="inline-flex items-center">
           {label}
@@ -110,11 +93,19 @@ export default function BudgetPlanTable({
     );
   }
 
+  if (data.length === 0) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm flex items-center justify-center py-20">
+        <p className="text-sm text-gray-400">Tidak ada data budget plan.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead className="bg-slate-50 border-b border-gray-200">
+        <table className="w-full border-collapse text-sm">
+          <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <Th label="Budget ID" column="displayId" />
               <Th label="COA" column="coa" />
@@ -123,61 +114,58 @@ export default function BudgetPlanTable({
               <Th label="Total Budget" column="totalBudget" align="right" />
               <Th label="Realisasi" column="totalRealisasi" align="right" />
               <Th label="Remaining" column="remaining" align="right" />
-              <th className="px-4 py-3 text-sm font-semibold text-center text-gray-700">
+              <th className="px-4 py-2.5 text-xs font-bold text-gray-800 text-center uppercase tracking-wide">
                 Action
               </th>
             </tr>
           </thead>
 
-          <tbody>
-            {sortedData.map((row, index) => {
-              const remainingClass =
-                row.remaining < 0
-                  ? "text-red-600"
-                  : row.remaining === 0
-                  ? "text-amber-600"
-                  : "text-gray-900";
-
-              return (
-                <tr
-                  key={row.id}
-                  className={`border-b border-gray-200 ${
-                    index % 2 === 0 ? "bg-white" : "bg-slate-100"
-                  } hover:bg-slate-200/40`}
-                >
-                  <td className="px-4 py-3 text-sm font-medium border-r border-gray-200">
-                    {row.displayId}
-                  </td>
-                  <td className="px-4 py-3 text-sm font-mono text-gray-600 border-r border-gray-200">
-                    {row.coa}
-                  </td>
-                  <td className="px-4 py-3 text-sm border-r border-gray-200">
-                    {row.category}
-                  </td>
-                  <td className="px-4 py-3 text-sm border-r border-gray-200">
-                    {row.component}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right tabular-nums border-r border-gray-200">
-                    {formatCurrency(row.totalBudget)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right tabular-nums border-r border-gray-200">
-                    {formatCurrency(row.totalRealisasi)}
-                  </td>
-                  <td
-                    className={`px-4 py-3 text-sm text-right tabular-nums font-medium border-r border-gray-200 ${remainingClass}`}
-                  >
-                    {formatCurrency(row.remaining)}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <ActionCell
-                      onDetail={() => onDetail(row)}
-                      onInput={() => onInput(row)}
-                      onEdit={() => onEdit(row)}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
+          <tbody className="divide-y divide-gray-100">
+            {sortedData.map((row, index) => (
+              <tr
+                key={row.id}
+                className={`transition-colors hover:bg-indigo-50/30 ${index % 2 === 0 ? "bg-white" : "bg-gray-100"}`}
+              >
+                {/* Budget ID — subtle, monospace */}
+                <td className="px-4 py-2.5 font-mono text-xs font-semibold text-gray-600 border-r border-gray-200">
+                  {row.displayId}
+                </td>
+                {/* COA */}
+                <td className="px-4 py-2.5 text-xs font-mono text-gray-500 border-r border-gray-200">
+                  {row.coa}
+                </td>
+                {/* Category */}
+                <td className="px-4 py-2.5 text-sm text-gray-600 border-r border-gray-200">
+                  {row.category}
+                </td>
+                {/* Component */}
+                <td className="px-4 py-2.5 text-sm text-gray-800 font-medium border-r border-gray-200 max-w-xs">
+                  {row.component}
+                </td>
+                {/* Total Budget */}
+                <td className="px-4 py-2.5 text-sm text-right tabular-nums text-gray-700 border-r border-gray-200">
+                  {formatCurrency(row.totalBudget)}
+                </td>
+                {/* Realisasi */}
+                <td className="px-4 py-2.5 text-sm text-right tabular-nums text-gray-700 border-r border-gray-200">
+                  {formatCurrency(row.totalRealisasi)}
+                </td>
+                {/* Remaining — hanya merah kalau minus, sisanya normal */}
+                <td className={`px-4 py-2.5 text-sm text-right tabular-nums font-medium border-r border-gray-200 ${
+                  row.remaining < 0 ? "text-red-600" : "text-gray-800"
+                }`}>
+                  {formatCurrency(row.remaining)}
+                </td>
+                {/* Action */}
+                <td className="px-4 py-2.5 text-center">
+                  <ActionCell
+                    onDetail={() => onDetail(row)}
+                    onInput={() => onInput(row)}
+                    onEdit={() => onEdit(row)}
+                  />
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
