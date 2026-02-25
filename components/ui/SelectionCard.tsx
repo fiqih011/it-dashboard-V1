@@ -35,9 +35,9 @@ export default function SelectionCard({
           <div
             className={clsx(
               "flex h-10 w-10 items-center justify-center rounded-lg",
-              "bg-blue-50 text-blue-600",
+              "bg-indigo-50 text-indigo-600",
               "transition-colors",
-              "group-hover:bg-blue-100"
+              "group-hover:bg-indigo-100"
             )}
           >
             {icon}
@@ -70,8 +70,8 @@ export default function SelectionCard({
           href={href}
           className={clsx(
             "inline-flex items-center gap-2 text-sm font-medium",
-            "text-blue-600 hover:text-blue-700",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            "text-indigo-600 hover:text-indigo-700",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           )}
         >
           View {title}

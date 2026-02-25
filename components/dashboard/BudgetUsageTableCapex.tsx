@@ -2,7 +2,6 @@
 
 import { AlertCircle, CheckCircle, MinusCircle, TrendingUp, RefreshCw, Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useState } from "react";
-import Button from "@/components/ui/Button";
 
 export type BudgetUsageItemCapex = {
   budgetId: string;
@@ -133,12 +132,12 @@ export default function BudgetUsageTableCapex({
   // Render sort icon
   const renderSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />;
+      return <ArrowUpDown className="w-3.5 h-3.5 text-gray-300" />;
     }
     if (sortDirection === 'asc') {
-      return <ArrowUp className="w-3.5 h-3.5 text-blue-600" />;
+      return <ArrowUp className="w-3.5 h-3.5 text-indigo-600" />;
     }
-    return <ArrowDown className="w-3.5 h-3.5 text-blue-600" />;
+    return <ArrowDown className="w-3.5 h-3.5 text-indigo-600" />;
   };
 
   const summary = {
@@ -162,19 +161,18 @@ export default function BudgetUsageTableCapex({
               Budget Usage Details
             </h2>
             <p className="text-gray-500 text-sm mt-1">
-              Rincian penggunaan budget per item CAPEX
+              Budget usage breakdown per CAPEX item
             </p>
           </div>
           {onRefresh && (
-            <Button
-              variant="secondary"
+            <button
               onClick={onRefresh}
               disabled={loading}
-              className="flex items-center gap-2"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition disabled:opacity-40"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
               <span>Refresh</span>
-            </Button>
+            </button>
           )}
         </div>
       </div>
@@ -185,7 +183,7 @@ export default function BudgetUsageTableCapex({
           <thead className="bg-slate-50 sticky top-0 z-10">
             <tr className="border-b-2 border-gray-200">
               <th 
-                className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-indigo-100"
                 onClick={() => handleSort('budgetId')}
               >
                 <div className="flex items-center gap-2">
@@ -194,7 +192,7 @@ export default function BudgetUsageTableCapex({
                 </div>
               </th>
               <th 
-                className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-indigo-100"
                 onClick={() => handleSort('itemCode')}
               >
                 <div className="flex items-center gap-2">
@@ -203,7 +201,7 @@ export default function BudgetUsageTableCapex({
                 </div>
               </th>
               <th 
-                className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-indigo-100"
                 onClick={() => handleSort('itemDescription')}
               >
                 <div className="flex items-center gap-2">
@@ -212,7 +210,7 @@ export default function BudgetUsageTableCapex({
                 </div>
               </th>
               <th 
-                className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-indigo-100"
                 onClick={() => handleSort('noCapex')}
               >
                 <div className="flex items-center gap-2">
@@ -221,7 +219,7 @@ export default function BudgetUsageTableCapex({
                 </div>
               </th>
               <th 
-                className="px-5 py-4 text-right text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                className="px-5 py-4 text-right text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-indigo-100"
                 onClick={() => handleSort('totalBudget')}
               >
                 <div className="flex items-center justify-end gap-2">
@@ -230,16 +228,16 @@ export default function BudgetUsageTableCapex({
                 </div>
               </th>
               <th 
-                className="px-5 py-4 text-right text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                className="px-5 py-4 text-right text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-indigo-100"
                 onClick={() => handleSort('used')}
               >
                 <div className="flex items-center justify-end gap-2">
-                  <span>Realisasi</span>
+                  <span>Realization</span>
                   {renderSortIcon('used')}
                 </div>
               </th>
               <th 
-                className="px-5 py-4 text-right text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                className="px-5 py-4 text-right text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-indigo-100"
                 onClick={() => handleSort('remaining')}
               >
                 <div className="flex items-center justify-end gap-2">
@@ -248,7 +246,7 @@ export default function BudgetUsageTableCapex({
                 </div>
               </th>
               <th 
-                className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-slate-100"
+                className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider border-r border-gray-200 cursor-pointer hover:bg-indigo-100"
                 onClick={() => handleSort('percentage')}
               >
                 <div className="flex items-center gap-2">
@@ -271,7 +269,7 @@ export default function BudgetUsageTableCapex({
                 <td colSpan={10} className="px-6 py-12 text-center">
                   <div className="flex flex-col items-center justify-center gap-3">
                     <RefreshCw className="w-8 h-8 animate-spin text-gray-400" />
-                    <span className="text-gray-500 font-medium">Memuat data...</span>
+                    <span className="text-gray-500 font-medium">Loading data...</span>
                   </div>
                 </td>
               </tr>
@@ -280,7 +278,7 @@ export default function BudgetUsageTableCapex({
             {!loading && data.length === 0 && (
               <tr>
                 <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
-                  Tidak ada data budget
+                  No budget data found
                 </td>
               </tr>
             )}
@@ -295,7 +293,7 @@ export default function BudgetUsageTableCapex({
                     className={`
                       border-b border-gray-200
                       hover:bg-slate-50 transition-colors
-                      ${index % 2 === 0 ? "bg-white" : "bg-slate-100"}
+                      
                     `}
                   >
                     {/* BUDGET ID */}
@@ -383,7 +381,7 @@ export default function BudgetUsageTableCapex({
                       {onViewDetails && (
                         <button
                           onClick={() => onViewDetails(item.budgetInternalId)}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors border border-slate-300 shadow-sm hover:shadow"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors border border-indigo-200 hover:border-indigo-400 text-xs font-semibold"
                           title="View transaction details"
                         >
                           <Eye className="w-4 h-4" />
@@ -400,14 +398,14 @@ export default function BudgetUsageTableCapex({
 
       {/* FOOTER SUMMARY */}
       {!loading && data.length > 0 && (
-        <div className="bg-slate-50 px-6 py-5 border-t-2 border-gray-200">
+        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
           <div className="flex justify-between items-center">
             <span className="text-gray-700 font-medium">
               Total{" "}
               <span className="font-bold text-gray-900 text-lg mx-1">
                 {data.length}
               </span>
-              item budget
+              budget items
             </span>
             <span className="text-gray-700 font-medium">
               Overall usage:{" "}

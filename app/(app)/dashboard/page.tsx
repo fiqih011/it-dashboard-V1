@@ -12,15 +12,12 @@ import type { BudgetUsageItem } from "@/components/dashboard/BudgetUsageTable";
 import type { BudgetUsageItemCapex } from "@/components/dashboard/BudgetUsageTableCapex";
 
 import DashboardOpexFilter from "@/components/filter/dashboard/DashboardOpexFilter";
-import DashboardCapexFilter, {
-  type DashboardCapexFilterValue,
-  type DashboardCapexFilterOptions,
-} from "@/components/filter/dashboard/DashboardCapexFilter";
+import DashboardCapexFilter from "@/components/filter/dashboard/DashboardCapexFilter";
+import type { DashboardCapexFilterValue, DashboardCapexFilterOptions } from "@/components/filter/dashboard/DashboardCapexFilter";
 
 import OpexGlobalSummary from "@/components/dashboard/opex/OpexGlobalSummary";
-import OpexChartsGrid from "@/components/dashboard/opex/OpexChartsGrid";
+import OpexGroupedBarChart from "@/components/dashboard/opex/OpexGroupedBarChart";
 import CapexGlobalSummary from "@/components/dashboard/capex/CapexGlobalSummary";
-import CapexChartsGrid from "@/components/dashboard/capex/CapexChartsGrid";
 import CapexGroupedBarChart from "@/components/dashboard/capex/CapexGroupedBarChart";
 
 import type { DistributionChartData as OpexDistributionChartData } from "@/components/dashboard/opex/OpexDistributionChart";
@@ -122,7 +119,7 @@ function OpexTab() {
       setChartDistribution(data.distributionData || []);
       setChartStatus(data.statusData || null);
     } catch {
-      setErrorCharts("Gagal mengambil data charts");
+      setErrorCharts("Failed to load chart data");
       setChartDistribution([]);
       setChartStatus(null);
     } finally { setLoadingCharts(false); }
@@ -170,6 +167,8 @@ function OpexTab() {
 
   return (
     <div className="space-y-5">
+      <OpexGlobalSummary data={budgetData} loading={loadingTable} />
+
       <DashboardOpexFilter
         value={filterDraft}
         options={filterOptions}
@@ -178,14 +177,10 @@ function OpexTab() {
         onReset={handleReset}
       />
 
-      <OpexGlobalSummary data={budgetData} loading={loadingTable} />
 
       {filterApplied.coa && (
-        <OpexChartsGrid
-          coa={filterApplied.coa}
-          distributionData={chartDistribution}
-          statusData={chartStatus}
-          groupedBarData={groupedBarData}
+        <OpexGroupedBarChart
+          data={groupedBarData ?? []}
           loading={loadingCharts}
           error={errorCharts}
         />
@@ -285,7 +280,7 @@ function CapexTab() {
       setDistributionData(data.distributionData || []);
       setStatusData(data.statusData || null);
     } catch {
-      setErrorCharts("Gagal mengambil data charts");
+      setErrorCharts("Failed to load chart data");
       setDistributionData([]);
       setStatusData(null);
     } finally { setLoadingCharts(false); }
@@ -326,6 +321,8 @@ function CapexTab() {
 
   return (
     <div className="space-y-5">
+      <CapexGlobalSummary data={tableData} loading={loadingTable} />
+
       <DashboardCapexFilter
         value={filterDraft}
         options={filterOptions}
@@ -334,19 +331,8 @@ function CapexTab() {
         onReset={handleReset}
       />
 
-      <CapexGlobalSummary data={tableData} loading={loadingTable} />
-
       <CapexGroupedBarChart data={chartData} loading={loadingTable} error={null} />
 
-      {filterApplied.noCapex && (
-        <CapexChartsGrid
-          noCapex={filterApplied.noCapex}
-          distributionData={distributionData}
-          statusData={statusData}
-          loading={loadingCharts}
-          error={errorCharts}
-        />
-      )}
 
       <BudgetUsageTableCapex
         data={tableData}
@@ -383,7 +369,7 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Ringkasan penggunaan budget operasional dan capital expenditure
+          Overview of operational and capital expenditure budget utilization
         </p>
       </div>
 

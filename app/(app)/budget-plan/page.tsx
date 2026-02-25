@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FileText, Briefcase, TrendingUp, Wallet } from "lucide-react";
 import { BudgetPlanOpex, BudgetPlanCapex } from "@prisma/client";
 
+import SummaryCard from "@/components/ui/SummaryCard";
 import BudgetPlanFilter from "@/components/filter/BudgetPlanFilter";
 import BudgetPlanCapexFilter from "@/components/filter/BudgetPlanCapexFilter";
 import BudgetPlanTable, { BudgetPlanRow } from "@/components/table/BudgetPlanTable";
@@ -20,8 +21,6 @@ import TransactionDetailCapexModal from "@/components/modal/TransactionDetailCap
 import InputTransactionModal from "@/components/modal/InputTransactionModal";
 import InputTransactionCapexModal from "@/components/modal/InputTransactionCapexModal";
 
-
-// ─────────────────────────────────────────────
 type Tab = "opex" | "capex";
 
 function fmt(n: number) {
@@ -30,34 +29,6 @@ function fmt(n: number) {
     currency: "IDR",
     minimumFractionDigits: 0,
   }).format(n);
-}
-
-// ─────────────────────────────────────────────
-// SUMMARY CARDS
-// ─────────────────────────────────────────────
-function SummaryCard({
-  label,
-  value,
-  sub,
-  gradient,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-  gradient: string;
-  icon: React.ComponentType<{ className?: string }>;
-}) {
-  return (
-    <div className={`bg-gradient-to-br ${gradient} rounded-2xl p-5 text-white`}>
-      <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-3">
-        <Icon className="w-5 h-5 text-white" />
-      </div>
-      <p className="text-xs font-bold uppercase tracking-wide text-white/70 mb-1">{label}</p>
-      <p className="text-xl font-bold leading-tight">{value}</p>
-      <p className="text-xs text-white/60 mt-0.5">{sub}</p>
-    </div>
-  );
 }
 
 // ─────────────────────────────────────────────
@@ -73,7 +44,6 @@ function OpexTab() {
   const [draftFilters, setDraftFilters] = useState<BudgetPlanFilterValue>({ year: String(new Date().getFullYear()) });
   const [appliedFilters, setAppliedFilters] = useState<BudgetPlanFilterValue>({ year: String(new Date().getFullYear()) });
 
-  // Modals
   const [openCreate, setOpenCreate] = useState(false);
   const [editRaw, setEditRaw] = useState<BudgetPlanOpex | null>(null);
   const [detailRow, setDetailRow] = useState<BudgetPlanRow | null>(null);
@@ -95,7 +65,6 @@ function OpexTab() {
     const json = await res.json();
     const apiData: BudgetPlanOpex[] = json.data ?? [];
 
-    // ✅ Mapping persis seperti page asli
     setRows(
       apiData.map((item) => ({
         id: item.id,
@@ -115,9 +84,6 @@ function OpexTab() {
 
   useEffect(() => { fetchData(); }, [page, pageSize, appliedFilters]);
 
-  // Filter options derived from raw data — persis seperti page asli
-  
-
   const stats = useMemo(() => ({
     total,
     totalBudget: rows.reduce((s, r) => s + r.totalBudget, 0),
@@ -127,21 +93,19 @@ function OpexTab() {
 
   return (
     <div className="space-y-5">
-      {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-4">
-        <SummaryCard label="Total OPEX Entries" value={String(stats.total)} sub="All budget entries" gradient="from-indigo-600 to-indigo-500" icon={FileText} />
-        <SummaryCard label="Total Budget" value={fmt(stats.totalBudget)} sub="Planned amount" gradient="from-blue-600 to-blue-500" icon={Wallet} />
-        <SummaryCard label="Total Realization" value={fmt(stats.totalRealisasi)} sub="Realized amount" gradient="from-amber-500 to-orange-400" icon={TrendingUp} />
+        <SummaryCard icon={<FileText className="w-5 h-5" />} title="Total OPEX Entries" value={String(stats.total)} sub="All budget entries" color="indigo" />
+        <SummaryCard icon={<Wallet className="w-5 h-5" />} title="Total Budget" value={fmt(stats.totalBudget)} sub="Planned amount" color="blue" />
+        <SummaryCard icon={<TrendingUp className="w-5 h-5" />} title="Total Realization" value={fmt(stats.totalRealisasi)} sub="Realized amount" color="orange" />
         <SummaryCard
-          label="Total Remaining"
+          icon={<Wallet className="w-5 h-5" />}
+          title="Total Remaining"
           value={fmt(stats.totalRemaining)}
           sub="Available balance"
-          gradient={stats.totalRemaining < 0 ? "from-red-600 to-red-500" : "from-emerald-600 to-emerald-500"}
-          icon={Wallet}
+          color={stats.totalRemaining < 0 ? "red" : "emerald"}
         />
       </div>
 
-      {/* Filter */}
       <BudgetPlanFilter
         value={draftFilters}
         onChange={setDraftFilters}
@@ -149,49 +113,27 @@ function OpexTab() {
         onReset={() => { const y = { year: String(new Date().getFullYear()) }; setDraftFilters(y); setAppliedFilters(y); setPage(1); }}
       />
 
-      {/* Table */}
       <BudgetPlanTable
         data={rows}
-        onEdit={(row) => {
-          const raw = rawRows.find((r) => r.id === row.id);
-          if (raw) setEditRaw(raw);
-        }}
-        onInput={(row) => {
-          setSelectedBudgetId(row.id);
-          setOpenInputTx(true);
-        }}
+        onEdit={(row) => { const raw = rawRows.find((r) => r.id === row.id); if (raw) setEditRaw(raw); }}
+        onInput={(row) => { setSelectedBudgetId(row.id); setOpenInputTx(true); }}
         onDetail={(row) => setDetailRow(row)}
       />
 
-      {/* Pagination */}
       <PaginationBar
         page={page} pageSize={pageSize} total={total}
         onPageChange={setPage}
         onPageSizeChange={(n) => { setPageSize(n); setPage(1); }}
       />
 
-      {/* Modals */}
-      <CreateBudgetPlanModal
-        open={openCreate}
-        onClose={() => setOpenCreate(false)}
-        onSuccess={() => { fetchData(); }}
-      />
+      <CreateBudgetPlanModal open={openCreate} onClose={() => setOpenCreate(false)} onSuccess={() => { fetchData(); }} />
 
       {editRaw && (
-        <EditBudgetPlanModal
-          open
-          data={editRaw}
-          onClose={() => setEditRaw(null)}
-          onSuccess={() => { setEditRaw(null); fetchData(); }}
-        />
+        <EditBudgetPlanModal open data={editRaw} onClose={() => setEditRaw(null)} onSuccess={() => { setEditRaw(null); fetchData(); }} />
       )}
 
       {detailRow && (
-        <TransactionDetailModal
-          open
-          budgetId={detailRow.id}
-          onClose={() => setDetailRow(null)}
-        />
+        <TransactionDetailModal open budgetId={detailRow.id} onClose={() => setDetailRow(null)} />
       )}
 
       <InputTransactionModal
@@ -217,7 +159,6 @@ function CapexTab() {
   const [draftFilters, setDraftFilters] = useState<BudgetPlanCapexFilterValue>({ year: String(new Date().getFullYear()) });
   const [appliedFilters, setAppliedFilters] = useState<BudgetPlanCapexFilterValue>({ year: String(new Date().getFullYear()) });
 
-  // Modals
   const [openCreate, setOpenCreate] = useState(false);
   const [editRaw, setEditRaw] = useState<BudgetPlanCapex | null>(null);
   const [detailRow, setDetailRow] = useState<BudgetPlanCapexRow | null>(null);
@@ -240,7 +181,6 @@ function CapexTab() {
     const json = await res.json();
     const apiData: BudgetPlanCapex[] = json.data ?? [];
 
-    // ✅ Mapping persis seperti page asli
     setRows(
       apiData.map((i) => ({
         id: i.id,
@@ -261,7 +201,6 @@ function CapexTab() {
 
   useEffect(() => { fetchData(); }, [page, pageSize, appliedFilters]);
 
-  // Filter options derived from raw data — persis seperti page asli
   const stats = useMemo(() => ({
     total,
     totalBudget: rows.reduce((s, r) => s + r.totalBudget, 0),
@@ -271,21 +210,19 @@ function CapexTab() {
 
   return (
     <div className="space-y-5">
-      {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-4">
-        <SummaryCard label="Total CAPEX Entries" value={String(stats.total)} sub="All budget entries" gradient="from-indigo-600 to-indigo-500" icon={Briefcase} />
-        <SummaryCard label="Total Budget" value={fmt(stats.totalBudget)} sub="Planned amount" gradient="from-blue-600 to-blue-500" icon={Wallet} />
-        <SummaryCard label="Total Realization" value={fmt(stats.totalRealisasi)} sub="Realized amount" gradient="from-amber-500 to-orange-400" icon={TrendingUp} />
+        <SummaryCard icon={<Briefcase className="w-5 h-5" />} title="Total CAPEX Entries" value={String(stats.total)} sub="All budget entries" color="indigo" />
+        <SummaryCard icon={<Wallet className="w-5 h-5" />} title="Total Budget" value={fmt(stats.totalBudget)} sub="Planned amount" color="blue" />
+        <SummaryCard icon={<TrendingUp className="w-5 h-5" />} title="Total Realization" value={fmt(stats.totalRealisasi)} sub="Realized amount" color="orange" />
         <SummaryCard
-          label="Total Remaining"
+          icon={<Wallet className="w-5 h-5" />}
+          title="Total Remaining"
           value={fmt(stats.totalRemaining)}
           sub="Available balance"
-          gradient={stats.totalRemaining < 0 ? "from-red-600 to-red-500" : "from-emerald-600 to-emerald-500"}
-          icon={Wallet}
+          color={stats.totalRemaining < 0 ? "red" : "emerald"}
         />
       </div>
 
-      {/* Filter */}
       <BudgetPlanCapexFilter
         value={draftFilters}
         onChange={setDraftFilters}
@@ -293,49 +230,27 @@ function CapexTab() {
         onReset={() => { const y = { year: String(new Date().getFullYear()) }; setDraftFilters(y); setAppliedFilters(y); setPage(1); }}
       />
 
-      {/* Table */}
       <BudgetPlanCapexTable
         data={rows}
-        onEdit={(row) => {
-          const raw = rawRows.find((r) => r.id === row.id);
-          if (raw) setEditRaw(raw);
-        }}
-        onInput={(row) => {
-          setSelectedBudgetId(row.id);
-          setOpenInputTx(true);
-        }}
+        onEdit={(row) => { const raw = rawRows.find((r) => r.id === row.id); if (raw) setEditRaw(raw); }}
+        onInput={(row) => { setSelectedBudgetId(row.id); setOpenInputTx(true); }}
         onDetail={(row) => setDetailRow(row)}
       />
 
-      {/* Pagination */}
       <PaginationBar
         page={page} pageSize={pageSize} total={total}
         onPageChange={setPage}
         onPageSizeChange={(n) => { setPageSize(n); setPage(1); }}
       />
 
-      {/* Modals */}
-      <CreateBudgetPlanCapexModal
-        open={openCreate}
-        onClose={() => setOpenCreate(false)}
-        onSuccess={() => { fetchData(); }}
-      />
+      <CreateBudgetPlanCapexModal open={openCreate} onClose={() => setOpenCreate(false)} onSuccess={() => { fetchData(); }} />
 
       {editRaw && (
-        <EditBudgetPlanCapexModal
-          open
-          data={editRaw}
-          onClose={() => setEditRaw(null)}
-          onSuccess={() => { setEditRaw(null); fetchData(); }}
-        />
+        <EditBudgetPlanCapexModal open data={editRaw} onClose={() => setEditRaw(null)} onSuccess={() => { setEditRaw(null); fetchData(); }} />
       )}
 
       {detailRow && (
-        <TransactionDetailCapexModal
-          open
-          budgetId={detailRow.id}
-          onClose={() => setDetailRow(null)}
-        />
+        <TransactionDetailCapexModal open budgetId={detailRow.id} onClose={() => setDetailRow(null)} />
       )}
 
       {selectedBudgetId && (
@@ -365,13 +280,10 @@ export default function BudgetPlanPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Budget Plan</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Kelola budget plan operasional dan capital expenditure
-          </p>
+          <p className="text-sm text-gray-500 mt-1">Manage operational and capital expenditure budget plans</p>
         </div>
         <button
           onClick={() => tab === "opex" ? setOpenCreateOpex(true) : setOpenCreateCapex(true)}
@@ -381,9 +293,7 @@ export default function BudgetPlanPage() {
         </button>
       </div>
 
-      {/* Tab Container */}
       <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        {/* Tab Bar */}
         <div className="border-b border-gray-200 px-6 pt-4 flex gap-1">
           {tabs.map(({ key, label, sub, Icon }) => (
             <button
@@ -401,27 +311,13 @@ export default function BudgetPlanPage() {
             </button>
           ))}
         </div>
-
-        {/* Tab Content */}
         <div className="p-6">
-          {tab === "opex"
-            ? <OpexTab key="opex" />
-            : <CapexTab key="capex" />
-          }
+          {tab === "opex" ? <OpexTab key="opex" /> : <CapexTab key="capex" />}
         </div>
       </div>
 
-      {/* Create Modals dari header button */}
-      <CreateBudgetPlanModal
-        open={openCreateOpex}
-        onClose={() => setOpenCreateOpex(false)}
-        onSuccess={() => setOpenCreateOpex(false)}
-      />
-      <CreateBudgetPlanCapexModal
-        open={openCreateCapex}
-        onClose={() => setOpenCreateCapex(false)}
-        onSuccess={() => setOpenCreateCapex(false)}
-      />
+      <CreateBudgetPlanModal open={openCreateOpex} onClose={() => setOpenCreateOpex(false)} onSuccess={() => setOpenCreateOpex(false)} />
+      <CreateBudgetPlanCapexModal open={openCreateCapex} onClose={() => setOpenCreateCapex(false)} onSuccess={() => setOpenCreateCapex(false)} />
     </div>
   );
 }

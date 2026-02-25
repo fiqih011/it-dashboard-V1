@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
-import Button from "@/components/ui/Button";
+import { ChevronDown, ChevronUp, Search, X, Filter } from "lucide-react";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import type { DashboardOpexFilterValue, DashboardFilterOptions } from "@/types/dashboard";
 
@@ -23,17 +22,10 @@ export default function DashboardOpexFilter({
 }: DashboardOpexFilterProps) {
   const [isOpen, setIsOpen] = useState(true);
 
-  const handleFieldChange = (field: keyof DashboardOpexFilterValue, newValue: string) => {
-    onChange({
-      ...value,
-      [field]: newValue,
-    });
-  };
+  const activeCount = Object.values(value).filter(Boolean).length;
 
-  const handleSearch = () => {
-    onSearch();
-    // Optional: auto-collapse after search for better UX
-    // setIsOpen(false);
+  const handleFieldChange = (field: keyof DashboardOpexFilterValue, newValue: string) => {
+    onChange({ ...value, [field]: newValue });
   };
 
   const handleReset = () => {
@@ -42,118 +34,114 @@ export default function DashboardOpexFilter({
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-      {/* ================= HEADER (TOGGLE) ================= */}
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
+      {/* Header */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors rounded-2xl"
       >
-        <div className="flex items-center gap-2">
-          {isOpen ? (
-            <ChevronUp className="h-5 w-5 text-gray-500" />
-          ) : (
-            <ChevronDown className="h-5 w-5 text-gray-500" />
-          )}
-          <h2 className="text-base font-semibold text-gray-900">Filter</h2>
+        <div className="flex items-center gap-3">
+          {isOpen
+            ? <ChevronUp className="h-4 w-4 text-gray-400" />
+            : <ChevronDown className="h-4 w-4 text-gray-400" />
+          }
+          <div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-indigo-500" />
+              <h2 className="text-sm font-bold text-gray-800">Filter Dashboard</h2>
+            </div>
+            <p className="text-xs text-gray-400 mt-0.5">Search by year, budget ID, COA, category, or component</p>
+          </div>
         </div>
 
-        {/* Active filter count badge */}
-        {Object.values(value).filter(Boolean).length > 0 && (
-          <span className="inline-flex items-center justify-center h-6 px-2 text-xs font-medium text-blue-700 bg-blue-50 rounded-full border border-blue-200">
-            {Object.values(value).filter(Boolean).length} aktif
+        {activeCount > 0 && (
+          <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-full">
+            {activeCount} Active {activeCount === 1 ? "Filter" : "Filters"}
           </span>
         )}
       </button>
 
-      {/* ================= FILTER CONTENT ================= */}
+      {/* Content */}
       {isOpen && (
-        <div className="px-6 pb-6 pt-2 border-t border-gray-200">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {/* Tahun */}
+        <div className="px-6 pb-5 pt-1 border-t border-gray-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-4">
+            {/* Year */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tahun
-              </label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Year</label>
               <SearchableSelect
                 value={value.year}
                 onChange={(val) => handleFieldChange("year", val || "")}
                 options={options.years}
-                placeholder="Pilih tahun"
+                placeholder="Select year"
               />
             </div>
 
             {/* Budget ID */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Budget ID
-              </label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Budget ID</label>
               <SearchableSelect
                 value={value.budgetId}
                 onChange={(val) => handleFieldChange("budgetId", val || "")}
                 options={options.budgetIds}
-                placeholder="Pilih Budget ID"
+                placeholder="Select Budget ID"
               />
             </div>
 
             {/* COA */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                COA
-              </label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">COA</label>
               <SearchableSelect
                 value={value.coa}
                 onChange={(val) => handleFieldChange("coa", val || "")}
                 options={options.coas}
-                placeholder="Pilih COA"
+                placeholder="Select COA"
               />
             </div>
 
             {/* Category */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category
-              </label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Category</label>
               <SearchableSelect
                 value={value.category}
                 onChange={(val) => handleFieldChange("category", val || "")}
                 options={options.categories}
-                placeholder="Pilih Category"
+                placeholder="Select Category"
               />
             </div>
 
             {/* Component */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Component
-              </label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Component</label>
               <SearchableSelect
                 value={value.component}
                 onChange={(val) => handleFieldChange("component", val || "")}
                 options={options.components}
-                placeholder="Pilih Component"
+                placeholder="Select Component"
               />
             </div>
           </div>
 
-          {/* ================= ACTION BUTTONS ================= */}
-          <div className="flex items-center gap-3 mt-6">
-            <Button
-              variant="primary"
-              onClick={handleSearch}
-              className="inline-flex items-center gap-2"
-            >
-              <Search className="h-4 w-4" />
-              <span>Search</span>
-            </Button>
-
-            <Button
-              variant="secondary"
-              onClick={handleReset}
-              className="inline-flex items-center gap-2"
-            >
-              <X className="h-4 w-4" />
-              <span>Reset</span>
-            </Button>
+          {/* Actions */}
+          <div className="flex items-center justify-between mt-5">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onSearch}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition"
+              >
+                <Search className="h-4 w-4" />
+                Apply Filters
+              </button>
+              <button
+                onClick={handleReset}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition"
+              >
+                <X className="h-4 w-4" />
+                Clear Filters
+              </button>
+            </div>
+            {activeCount > 0 && (
+              <span className="text-xs text-gray-400">{activeCount} Filter{activeCount > 1 ? "s" : ""} Applied</span>
+            )}
           </div>
         </div>
       )}
