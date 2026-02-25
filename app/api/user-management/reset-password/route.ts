@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
 
-function generatePassword() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+function generatePassword(): string {
+  const chars =
+    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
   let result = "";
   for (let i = 0; i < 12; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -13,14 +14,22 @@ function generatePassword() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await req.json();
+    const body: unknown = await req.json();
 
-    if (!userId) {
+    if (
+      typeof body !== "object" ||
+      body === null ||
+      !("userId" in body) ||
+      typeof body.userId !== "string" ||
+      body.userId.trim() === ""
+    ) {
       return NextResponse.json(
-        { message: "User ID is required" },
+        { message: "Invalid User ID" },
         { status: 400 }
       );
     }
+
+    const userId = body.userId;
 
     const user = await prisma.users.findUnique({
       where: { id: userId },
@@ -49,18 +58,6 @@ export async function POST(req: NextRequest) {
         force_change_password: true,
         password_expires_at: expiresAt,
         updated_at: new Date(),
-      },
-    });
-
-    // Log activity
-    await prisma.activity_logs.create({
-      data: {
-        actor_username: "admin", // TODO: Get from session
-        action: "RESET_PASSWORD",
-        module: "USER_MANAGEMENT",
-        target_type: "users",
-        target_id: userId,
-        description: `Password reset for user: ${user.username}`,
       },
     });
 

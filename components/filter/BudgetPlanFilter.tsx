@@ -1,110 +1,182 @@
 "use client";
 
-import type { BudgetPlanFilterValue } from "./types";
-import Button from "@/components/ui/Button";
+import { useEffect, useState } from "react";
+import { Filter, ChevronDown, Search, X } from "lucide-react";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import type { BudgetPlanFilterValue } from "./types";
+
+type Options = {
+  years: string[];
+  displayIds: string[];
+  coas: string[];
+  categories: string[];
+  components: string[];
+};
 
 type Props = {
   value: BudgetPlanFilterValue;
-  options: {
-    year: string[];
-    displayId: string[];
-    coa: string[];
-    category: string[];
-    component: string[];
-  };
   onChange: (value: BudgetPlanFilterValue) => void;
   onSearch: () => void;
   onReset: () => void;
 };
 
-export default function BudgetPlanFilter({
-  value,
-  options,
-  onChange,
-  onSearch,
-  onReset,
-}: Props) {
+export default function BudgetPlanFilter({ value, onChange, onSearch, onReset }: Props) {
+  const [isOpen, setIsOpen] = useState(true);
+  const [options, setOptions] = useState<Options>({
+    years: [], displayIds: [], coas: [], categories: [], components: [],
+  });
+
+  const activeCount = Object.values(value).filter((v) => v && v.trim() !== "").length;
+
+  // ── Fetch options on mount with current year as default ──
+  useEffect(() => {
+    fetchOptions(value.year);
+  }, []);
+
+  // ── Re-fetch contextual options when year changes ──
+  useEffect(() => {
+    fetchOptions(value.year);
+  }, [value.year]);
+
+  async function fetchOptions(year?: string) {
+    try {
+      const params = new URLSearchParams();
+      if (year) params.set("year", year);
+      const res = await fetch(`/api/budget/opex/filter-options?${params}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setOptions({
+        years: data.years ?? [],
+        displayIds: data.displayIds ?? [],
+        coas: data.coas ?? [],
+        categories: data.categories ?? [],
+        components: data.components ?? [],
+      });
+    } catch (err) {
+      console.error("[BudgetPlanFilter] fetchOptions error:", err);
+    }
+  }
+
+  const handleYearChange = (v: string | undefined) => {
+    // Reset all other filters when year changes
+    onChange({ year: v });
+  };
+
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
-      {/* ✅ FILTER GRID - 1 BARIS (5 KOLOM) */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Tahun
-          </label>
-          <SearchableSelect
-            value={value.year}
-            options={options.year}
-            placeholder="Pilih Tahun"
-            onChange={(v) => onChange({ ...value, year: v })}
-          />
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+      {/* ── Header toggle ── */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors rounded-t-xl"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`}>
+            <ChevronDown className="w-5 h-5 text-gray-500" />
+          </div>
+          <div className="text-left">
+            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+              <Filter className="w-4 h-4 text-gray-500" />
+              Filter Budget Plan
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Search by year, budget ID, COA, category, or component
+            </p>
+          </div>
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Budget ID
-          </label>
-          <SearchableSelect
-            value={value.displayId}
-            options={options.displayId}
-            placeholder="Ketik / pilih Budget ID"
-            onChange={(v) =>
-              onChange({ ...value, displayId: v })
-            }
-          />
-        </div>
+        {activeCount > 0 && (
+          <span className="px-3 py-1 bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold rounded-full">
+            {activeCount} Active Filter{activeCount > 1 ? "s" : ""}
+          </span>
+        )}
+      </button>
 
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            COA
-          </label>
-          <SearchableSelect
-            value={value.coa}
-            options={options.coa}
-            placeholder="Ketik / pilih COA"
-            onChange={(v) => onChange({ ...value, coa: v })}
-          />
-        </div>
+      {/* ── Content ── */}
+      {isOpen && (
+        <div className="px-6 pb-6 pt-2 border-t border-gray-100">
+          <div className="flex gap-4 mb-5">
+            {/* Tahun */}
+            <div className="flex-1 min-w-0">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Tahun</label>
+              <SearchableSelect
+                value={value.year}
+                options={options.years}
+                placeholder="Select Year"
+                onChange={handleYearChange}
+              />
+            </div>
 
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Category
-          </label>
-          <SearchableSelect
-            value={value.category}
-            options={options.category}
-            placeholder="Ketik / pilih Category"
-            onChange={(v) =>
-              onChange({ ...value, category: v })
-            }
-          />
-        </div>
+            {/* Budget ID */}
+            <div className="flex-1 min-w-0">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Budget ID</label>
+              <SearchableSelect
+                value={value.displayId}
+                options={options.displayIds}
+                placeholder="Select Budget ID"
+                onChange={(v) => onChange({ ...value, displayId: v })}
+              />
+            </div>
 
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Component
-          </label>
-          <SearchableSelect
-            value={value.component}
-            options={options.component}
-            placeholder="Ketik / pilih Component"
-            onChange={(v) =>
-              onChange({ ...value, component: v })
-            }
-          />
-        </div>
-      </div>
+            {/* COA */}
+            <div className="flex-1 min-w-0">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">COA</label>
+              <SearchableSelect
+                value={value.coa}
+                options={options.coas}
+                placeholder="Select COA"
+                onChange={(v) => onChange({ ...value, coa: v })}
+              />
+            </div>
 
-      {/* ACTION */}
-      <div className="mt-4 flex gap-2">
-        <Button variant="primary" onClick={onSearch}>
-          Search
-        </Button>
-        <Button variant="secondary" onClick={onReset}>
-          Reset
-        </Button>
-      </div>
+            {/* Category */}
+            <div className="flex-1 min-w-0">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Category</label>
+              <SearchableSelect
+                value={value.category}
+                options={options.categories}
+                placeholder="Select Category"
+                onChange={(v) => onChange({ ...value, category: v })}
+              />
+            </div>
+
+            {/* Component */}
+            <div className="flex-1 min-w-0">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Component</label>
+              <SearchableSelect
+                value={value.component}
+                options={options.components}
+                placeholder="Select Component"
+                onChange={(v) => onChange({ ...value, component: v })}
+              />
+            </div>
+          </div>
+
+          {/* ── Action buttons ── */}
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              onClick={onSearch}
+              className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition-all"
+            >
+              <Search className="w-4 h-4" />
+              Apply Filters
+            </button>
+
+            <button
+              onClick={() => { onReset(); fetchOptions(); }}
+              className="inline-flex items-center gap-2 bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all"
+            >
+              <X className="w-4 h-4" />
+              Clear Filters
+            </button>
+
+            {activeCount > 0 && (
+              <span className="text-sm text-gray-500 ml-auto">
+                {activeCount} Filter Applied{activeCount > 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

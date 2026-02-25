@@ -134,7 +134,7 @@ export default function TransactionCapexTable({ rows = [], onEdit, onDelete }: P
 
   // Sticky header bg
   const stickyBg = "#f3f4f6";
-  const stickyThClass = `${thBase} border-r-2 border-r-gray-200 text-left`;
+  const stickyThClass = `${thBase} text-gray-800 text-left`;
 
   return (
     <div className="w-full bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
@@ -145,7 +145,7 @@ export default function TransactionCapexTable({ rows = [], onEdit, onDelete }: P
               {/* STICKY: Transaction ID */}
               <th
                 onClick={() => handleSort("transactionDisplayId")}
-                style={{ position: "sticky", left: 0, zIndex: 30, backgroundColor: stickyBg, minWidth: 150, width: 150 }}
+                style={{ position: "sticky", left: 0, zIndex: 30, backgroundColor: stickyBg, minWidth: 150, width: 150, boxShadow: "inset -2px 0 0 #e5e7eb" }}
                 className={stickyThClass}
               >
                 <span className="inline-flex items-center">
@@ -156,7 +156,7 @@ export default function TransactionCapexTable({ rows = [], onEdit, onDelete }: P
               {/* STICKY: Budget ID */}
               <th
                 onClick={() => handleSort("budgetPlanCapexId")}
-                style={{ position: "sticky", left: 150, zIndex: 30, backgroundColor: stickyBg, minWidth: 130, width: 130 }}
+                style={{ position: "sticky", left: 150, zIndex: 30, backgroundColor: stickyBg, minWidth: 130, width: 130, boxShadow: "inset -2px 0 0 #e5e7eb" }}
                 className={stickyThClass}
               >
                 <span className="inline-flex items-center">
@@ -202,16 +202,16 @@ export default function TransactionCapexTable({ rows = [], onEdit, onDelete }: P
                 >
                   {/* STICKY: Transaction ID */}
                   <td
-                    style={{ position: "sticky", left: 0, zIndex: 20, backgroundColor: rowBg, minWidth: 150, width: 150 }}
-                    className="px-4 py-2.5 font-mono text-xs font-semibold text-gray-600 whitespace-nowrap border-r-2 border-r-gray-200"
+                    style={{ position: "sticky", left: 0, zIndex: 20, backgroundColor: rowBg, minWidth: 150, width: 150, boxShadow: "inset -2px 0 0 #e5e7eb" }}
+                    className="px-4 py-2.5 font-mono text-xs font-semibold text-gray-600 whitespace-nowrap"
                   >
                     {row.transactionDisplayId}
                   </td>
 
                   {/* STICKY: Budget ID */}
                   <td
-                    style={{ position: "sticky", left: 150, zIndex: 20, backgroundColor: rowBg, minWidth: 130, width: 130 }}
-                    className="px-4 py-2.5 font-mono text-xs font-semibold text-gray-600 whitespace-nowrap border-r-2 border-r-gray-200"
+                    style={{ position: "sticky", left: 150, zIndex: 20, backgroundColor: rowBg, minWidth: 130, width: 130, boxShadow: "inset -2px 0 0 #e5e7eb" }}
+                    className="px-4 py-2.5 font-mono text-xs font-semibold text-gray-600 whitespace-nowrap"
                   >
                     {row.budgetPlanCapexId}
                   </td>

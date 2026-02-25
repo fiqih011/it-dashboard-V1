@@ -1,21 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Modal from "@/components/ui/Modal";
-import Button from "@/components/ui/Button";
-import { useToast } from "@/lib/swal";
-import Swal from "sweetalert2";
-import {
-  Lock,
-  Eye,
-  EyeOff,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  ShieldCheck,
-  Info,
-  Shield,
-} from "lucide-react";
+import { X, Lock, Eye, EyeOff, CheckCircle2, XCircle, AlertCircle, ShieldCheck, Shield, Info } from "lucide-react";
+import { useToast, confirmAction } from "@/lib/swal";
 
 type Props = {
   open: boolean;
@@ -25,270 +12,194 @@ type Props = {
   onClose: () => void;
 };
 
-type PasswordRequirement = {
-  label: string;
-  test: (password: string) => boolean;
-};
-
-const passwordRequirements: PasswordRequirement[] = [
-  { label: "At least 8 characters", test: (p) => p.length >= 8 },
-  { label: "Contains uppercase letter", test: (p) => /[A-Z]/.test(p) },
-  { label: "Contains lowercase letter", test: (p) => /[a-z]/.test(p) },
-  { label: "Contains number", test: (p) => /[0-9]/.test(p) },
-  { label: "Contains special character", test: (p) => /[!@#$%^&*(),.?":{}|<>]/.test(p) },
+const passwordRequirements = [
+  { label: "At least 8 characters",      test: (p: string) => p.length >= 8 },
+  { label: "Contains uppercase letter",  test: (p: string) => /[A-Z]/.test(p) },
+  { label: "Contains lowercase letter",  test: (p: string) => /[a-z]/.test(p) },
+  { label: "Contains number",            test: (p: string) => /[0-9]/.test(p) },
+  { label: "Contains special character", test: (p: string) => /[!@#$%^&*(),.?":{}|<>]/.test(p) },
 ];
 
-export default function ChangePasswordModal({
-  open,
-  userId,
-  username,
-  fullName,
-  onClose,
-}: Props) {
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+function PasswordInput({ label, value, show, onToggle, onChange, error }: {
+  label: string; value: string; show: boolean;
+  onToggle: () => void; onChange: (v: string) => void; error?: boolean;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 mb-1.5">{label}</label>
+      <div className="relative">
+        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          type={show ? "text" : "password"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`w-full pl-10 pr-10 py-2.5 border rounded-xl text-sm text-gray-800 placeholder-gray-300 outline-none focus:ring-2 transition-all ${
+            error ? "border-red-300 focus:ring-red-100" : "border-gray-200 focus:border-indigo-400 focus:ring-indigo-100"
+          }`}
+          placeholder={`Enter ${label.toLowerCase()}`}
+        />
+        <button type="button" onClick={onToggle}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+          {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </button>
+      </div>
+    </div>
+  );
+}
 
+export default function ChangePasswordModal({ open, userId, username, fullName, onClose }: Props) {
+  const [newPassword, setNewPassword]           = useState("");
+  const [confirmPassword, setConfirmPassword]   = useState("");
+  const [showNew, setShowNew]                   = useState(false);
+  const [showConfirm, setShowConfirm]           = useState(false);
+  const [loading, setLoading]                   = useState(false);
+  const [error, setError]                       = useState<string | null>(null);
   const { showToast } = useToast();
 
-  // Validation
   const passwordsMatch = newPassword === confirmPassword && confirmPassword !== "";
-  const allRequirementsMet = passwordRequirements.every((req) => req.test(newPassword));
-  const canSubmit = newPassword.trim() !== "" && passwordsMatch && allRequirementsMet;
+  const allMet         = passwordRequirements.every((r) => r.test(newPassword));
+  const canSubmit      = newPassword.trim() !== "" && passwordsMatch && allMet;
 
   const handleSubmit = async () => {
-    if (!canSubmit) {
-      setError("Please ensure all password requirements are met");
-      return;
-    }
+    if (!canSubmit) { setError("Please ensure all password requirements are met"); return; }
 
-    // Konfirmasi
-    const result = await Swal.fire({
-      title: `Change password untuk ${username}?`,
-      html: `Password baru akan diterapkan untuk administrator <strong>${username}</strong>.<br/>Admin harus menggunakan password baru ini untuk login.`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#7c3aed",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: "Ya, ubah password",
-      cancelButtonText: "Batal",
-    });
-
-    if (!result.isConfirmed) return;
+    const ok = await confirmAction(
+      `Change password for ${username}?`,
+      "Admin will need to use the new password for their next login.",
+      "Yes, Change Password"
+    );
+    if (!ok) return;
 
     setLoading(true);
     setError(null);
-
     try {
-      const response = await fetch("/api/user-management/change-password", {
+      const res = await fetch("/api/user-management/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          newPassword,
-        }),
+        body: JSON.stringify({ userId, newPassword }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to change password");
-      }
-
-      showToast("success", `Password untuk ${username} berhasil diubah`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to change password");
+      showToast("success", `Password for ${username} changed successfully`);
       handleClose();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to change password";
-      setError(errorMessage);
-      showToast("error", errorMessage);
+      const msg = err instanceof Error ? err.message : "Failed to change password";
+      setError(msg);
+      showToast("error", msg);
     } finally {
       setLoading(false);
     }
   };
 
   const handleClose = () => {
-    setNewPassword("");
-    setConfirmPassword("");
-    setShowNewPassword(false);
-    setShowConfirmPassword(false);
-    setError(null);
-    onClose();
+    setNewPassword(""); setConfirmPassword("");
+    setShowNew(false); setShowConfirm(false);
+    setError(null); onClose();
   };
 
+  if (!open) return null;
+
   return (
-    <Modal
-      open={open}
-      title="Change Administrator Password"
-      onClose={handleClose}
-      footer={
-        <>
-          <Button variant="secondary" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={!canSubmit || loading}>
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Changing...
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <Lock className="w-4 h-4" />
-                Change Password
-              </span>
-            )}
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-5">
-        {/* Target User Info */}
-        <div className="flex items-start gap-3 p-4 bg-violet-50 border border-violet-200 rounded-lg">
-          <Shield className="w-5 h-5 text-violet-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-violet-900">
-              Change Password for Administrator
-            </p>
-            <div className="mt-2 text-xs text-violet-700">
-              <p className="font-medium">{username}</p>
-              {fullName && <p className="text-violet-600">{fullName}</p>}
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 overflow-hidden">
+
+        {/* Header */}
+        <div className="bg-gradient-to-r from-indigo-700 to-indigo-600 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-white">Change Administrator Password</h2>
+            <p className="text-xs text-indigo-200 mt-0.5">Set a new password for this admin account</p>
           </div>
+          <button onClick={handleClose} className="text-indigo-200 hover:text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Info Notice */}
-        <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-blue-900">Manual Password Change</p>
-            <p className="mt-1 text-xs text-blue-700">
-              Enter a new password for this administrator. The admin will use this password for their next login.
-            </p>
-          </div>
-        </div>
+        {/* Body */}
+        <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
 
-        {/* Error Message */}
-        {error && (
-          <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-red-900">Error</p>
-              <p className="mt-1 text-xs text-red-700">{error}</p>
+          {/* Target User */}
+          <div className="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+            <div className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Shield className="w-4 h-4 text-indigo-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-800">{username}</p>
+              {fullName && <p className="text-xs text-gray-400">{fullName}</p>}
             </div>
           </div>
-        )}
 
-        {/* New Password */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type={showNewPassword ? "text" : "password"}
-              value={newPassword}
-              onChange={(e) => {
-                setNewPassword(e.target.value);
-                setError(null);
-              }}
-              className="w-full pl-10 pr-12 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="Enter new password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowNewPassword(!showNewPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
+          {/* Info */}
+          <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+            <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-700">Admin will use this new password for their next login. Administrator passwords do not expire.</p>
           </div>
-        </div>
 
-        {/* Password Requirements */}
-        {newPassword && (
-          <div className="bg-slate-50 border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <ShieldCheck className="w-4 h-4 text-gray-600" />
-              <h4 className="text-sm font-medium text-gray-900">Password Requirements</h4>
+          {/* Error */}
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
+              <XCircle className="w-4 h-4 flex-shrink-0" />{error}
             </div>
-            <div className="space-y-2">
-              {passwordRequirements.map((req, index) => {
-                const passed = req.test(newPassword);
-                return (
-                  <div key={index} className="flex items-center gap-2 text-xs">
-                    {passed ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-gray-300 flex-shrink-0" />
-                    )}
-                    <span className={passed ? "text-emerald-700 font-medium" : "text-gray-500"}>
-                      {req.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* Confirm Password */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Confirm New Password
-          </label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type={showConfirmPassword ? "text" : "password"}
-              value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                setError(null);
-              }}
-              className={`w-full pl-10 pr-12 py-2.5 border rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 transition-colors ${
-                confirmPassword && !passwordsMatch
-                  ? "border-red-300 focus:ring-red-500 focus:border-transparent"
-                  : "border-gray-200 focus:ring-blue-500 focus:border-transparent"
-              }`}
-              placeholder="Re-enter new password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
+          {/* New Password */}
+          <PasswordInput label="New Password" value={newPassword} show={showNew}
+            onToggle={() => setShowNew(!showNew)} onChange={(v) => { setNewPassword(v); setError(null); }} />
+
+          {/* Requirements */}
+          {newPassword && (
+            <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
+              <div className="flex items-center gap-1.5 mb-2">
+                <ShieldCheck className="w-3.5 h-3.5 text-gray-500" />
+                <p className="text-xs font-semibold text-gray-600">Password Requirements</p>
+              </div>
+              <div className="space-y-1.5">
+                {passwordRequirements.map((r, i) => {
+                  const ok = r.test(newPassword);
+                  return (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      {ok
+                        ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        : <XCircle className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />}
+                      <span className={ok ? "text-emerald-700 font-medium" : "text-gray-400"}>{r.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Confirm */}
+          <PasswordInput label="Confirm New Password" value={confirmPassword} show={showConfirm}
+            error={!!confirmPassword && !passwordsMatch}
+            onToggle={() => setShowConfirm(!showConfirm)} onChange={(v) => { setConfirmPassword(v); setError(null); }} />
           {confirmPassword && !passwordsMatch && (
-            <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
-              <XCircle className="w-3 h-3" />
-              Passwords do not match
-            </p>
+            <p className="text-xs text-red-500 flex items-center gap-1 -mt-2"><XCircle className="w-3 h-3" />Passwords do not match</p>
           )}
           {confirmPassword && passwordsMatch && (
-            <p className="mt-1.5 text-xs text-emerald-600 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" />
-              Passwords match
-            </p>
+            <p className="text-xs text-emerald-600 flex items-center gap-1 -mt-2"><CheckCircle2 className="w-3 h-3" />Passwords match</p>
           )}
-        </div>
 
-        {/* Security Tips */}
-        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-amber-900">Security Reminder</p>
-            <ul className="mt-2 space-y-1 text-xs text-amber-700">
-              <li>• Make sure to securely communicate this password to the administrator</li>
-              <li>• Recommend they change it after first login</li>
-              <li>• Administrator passwords do not expire</li>
-            </ul>
+          {/* Security reminder */}
+          <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl">
+            <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700">Share the new password securely with the admin — avoid email or unsecured messaging apps.</p>
           </div>
         </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+          <button onClick={handleClose}
+            className="px-4 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-100 transition">
+            Cancel
+          </button>
+          <button onClick={handleSubmit} disabled={!canSubmit || loading}
+            className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 transition">
+            {loading
+              ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Changing...</>
+              : <><Lock className="w-4 h-4" />Change Password</>}
+          </button>
+        </div>
       </div>
-    </Modal>
+    </div>
   );
 }

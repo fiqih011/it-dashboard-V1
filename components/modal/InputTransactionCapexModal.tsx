@@ -11,8 +11,8 @@ type BudgetInfo = {
   displayId: string;
   noCapex: string;
   description: string;
-  budgetPlanAmount: string;
-  budgetRemainingAmount: string;
+  budgetPlanAmount: number;
+  budgetRemainingAmount: number;
 };
 
 type Props = {
@@ -32,30 +32,23 @@ export default function InputTransactionCapexModal({
   const [budgetInfo, setBudgetInfo] = useState<BudgetInfo | null>(null);
 
   useEffect(() => {
-    if (open && budgetPlanCapexId) {
-      fetchBudgetInfo();
-    }
+    if (open && budgetPlanCapexId) fetchBudgetInfo();
   }, [open, budgetPlanCapexId]);
 
   const fetchBudgetInfo = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/budget/capex/${budgetPlanCapexId}`);
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch budget info");
-      }
-
-      const data = await response.json();
+      const res = await fetch(`/api/budget/capex/${budgetPlanCapexId}`);
+      if (!res.ok) throw new Error("Failed to fetch budget info");
+      const data = await res.json();
       setBudgetInfo({
         displayId: data.budgetDisplayId,
         noCapex: data.noCapex || "-",
         description: data.itemDescription || "-",
-        budgetPlanAmount: Number(data.budgetPlanAmount).toLocaleString("id-ID"),
-        budgetRemainingAmount: Number(data.budgetRemainingAmount).toLocaleString("id-ID"),
+        budgetPlanAmount: Number(data.budgetPlanAmount),
+        budgetRemainingAmount: Number(data.budgetRemainingAmount),
       });
     } catch (error) {
-      console.error("Error fetching budget info:", error);
       showError("Failed to load budget data");
       onClose();
     } finally {
@@ -65,21 +58,13 @@ export default function InputTransactionCapexModal({
 
   const handleSubmit = async (data: TransactionCapexFormData) => {
     try {
-      const response = await fetch("/api/transaction/capex", {
+      const res = await fetch("/api/transaction/capex", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          budgetPlanCapexId,
-        }),
+        body: JSON.stringify({ ...data, budgetPlanCapexId }),
       });
-
-      const json = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(json?.error || "Failed to save transaction");
-      }
-
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Failed to save transaction");
       showSuccess("CAPEX transaction saved successfully");
       onSuccess();
       onClose();
@@ -89,6 +74,8 @@ export default function InputTransactionCapexModal({
   };
 
   if (!open) return null;
+
+  const fmt = (n: number) => `Rp ${Math.abs(n).toLocaleString("id-ID")}`;
 
   const initialData: TransactionCapexFormData = {
     vendor: "",
@@ -114,96 +101,91 @@ export default function InputTransactionCapexModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col border border-gray-200">
-        {/* 
-          =====================================================
-          HEADER
-          =====================================================
-        */}
-        <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-4 rounded-t-2xl border-b border-slate-600">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h2 className="text-lg font-bold text-white">
-                Input CAPEX Transaction
-              </h2>
-              <p className="text-xs text-slate-200 mt-0.5">
-                Complete the form below to add a new transaction
-              </p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-gray-200">
 
-              {/* Budget Info - Compact */}
-              {budgetInfo && (
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs text-slate-100">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-300">Budget CAPEX:</span>
-                    <span className="font-semibold font-mono">{budgetInfo.displayId}</span>
-                  </div>
-                  <span className="text-slate-400">|</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-300">No CAPEX:</span>
-                    <span className="font-semibold font-mono">{budgetInfo.noCapex}</span>
-                  </div>
-                  <span className="text-slate-400">|</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-300">Description:</span>
-                    <span className="font-semibold truncate max-w-xs">
-                      {budgetInfo.description}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Budget Summary */}
-              {budgetInfo && (
-                <div className="flex gap-4 mt-2 text-xs text-slate-100">
-                  <span>
-                    Planned: <strong>Rp {budgetInfo.budgetPlanAmount}</strong>
-                  </span>
-                  <span>|</span>
-                  <span>
-                    Remaining:{" "}
-                    <strong className="text-green-300">
-                      Rp {budgetInfo.budgetRemainingAmount}
-                    </strong>
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={onClose}
-              className="text-slate-300 hover:text-white transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
+        {/* ── Header ── */}
+        <div className="bg-gradient-to-r from-indigo-700 to-indigo-600 px-6 py-4 rounded-t-2xl flex items-center justify-between flex-shrink-0">
+          <div>
+            <h2 className="text-base font-bold text-white">Input CAPEX Transaction</h2>
+            <p className="text-xs text-indigo-200 mt-0.5">Complete the form below to add a new transaction</p>
           </div>
+          <button onClick={onClose} className="text-indigo-200 hover:text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* 
-          =====================================================
-          BODY - SCROLLABLE FORM
-          =====================================================
-        */}
-        <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-slate-300 border-t-slate-600 mb-3"></div>
-                <p className="text-slate-500 text-sm">Loading budget data...</p>
+        {/* ── Body: 2-panel ── */}
+        <div className="flex flex-1 overflow-hidden">
+
+          {/* LEFT — sticky budget info */}
+          <div className="w-52 flex-shrink-0 bg-indigo-50 border-r border-indigo-100 p-5 flex flex-col gap-4 overflow-y-auto">
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-6 w-6 border-2 border-indigo-300 border-t-indigo-600" />
               </div>
-            </div>
-          ) : budgetInfo ? (
-            <TransactionCapexForm
-              initialData={initialData}
-              remainingBudget={budgetInfo.budgetRemainingAmount}
-              onSubmit={handleSubmit}
-              onCancel={onClose}
-            />
-          ) : (
-            <div className="text-center py-12 text-slate-500">
-              Failed to load budget data
-            </div>
-          )}
+            ) : budgetInfo ? (
+              <>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-indigo-400 mb-3">Budget Info</p>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-indigo-400 font-medium">Budget ID</p>
+                      <p className="text-sm font-bold font-mono text-gray-800">{budgetInfo.displayId}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-indigo-400 font-medium">No CAPEX</p>
+                      <p className="text-sm font-bold font-mono text-gray-800">{budgetInfo.noCapex}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-indigo-400 font-medium">Description</p>
+                      <p className="text-sm font-semibold text-gray-800 leading-snug">{budgetInfo.description}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-indigo-200 pt-4">
+                  <p className="text-xs text-indigo-400 font-medium mb-1">Total Budget</p>
+                  <p className="text-sm font-semibold text-gray-700">{fmt(budgetInfo.budgetPlanAmount)}</p>
+                </div>
+
+                <div className="border-t border-indigo-200 pt-4">
+                  <p className="text-xs text-indigo-400 font-medium mb-1">Remaining</p>
+                  <p className={`text-base font-bold ${budgetInfo.budgetRemainingAmount < 0 ? "text-red-600" : "text-emerald-600"}`}>
+                    {budgetInfo.budgetRemainingAmount < 0 ? "-" : ""}{fmt(budgetInfo.budgetRemainingAmount)}
+                  </p>
+                  {budgetInfo.budgetRemainingAmount < 0 && (
+                    <p className="text-xs text-red-500 mt-1 font-medium">⚠ Over budget</p>
+                  )}
+                </div>
+              </>
+            ) : null}
+          </div>
+
+          {/* RIGHT — scrollable form */}
+          <div className="flex-1 overflow-y-auto bg-gray-50">
+            {loading ? (
+              <div className="flex items-center justify-center h-full py-16">
+                <div className="text-center">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-200 border-t-indigo-600 mb-3" />
+                  <p className="text-sm text-gray-500">Loading budget data...</p>
+                </div>
+              </div>
+            ) : budgetInfo ? (
+              <div className="p-6">
+                <TransactionCapexForm
+                  initialData={initialData}
+                  remainingBudget={budgetInfo.budgetRemainingAmount.toLocaleString("id-ID")}
+                  onSubmit={handleSubmit}
+                  onCancel={onClose}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full py-16 text-sm text-gray-400">
+                Failed to load budget data
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

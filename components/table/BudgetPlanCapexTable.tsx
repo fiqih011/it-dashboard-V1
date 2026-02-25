@@ -93,7 +93,7 @@ export default function BudgetPlanCapexTable({ data, onEdit, onInput, onDetail }
   if (data.length === 0) {
     return (
       <div className="bg-white border border-gray-200 rounded-2xl shadow-sm flex items-center justify-center py-20">
-        <p className="text-sm text-gray-400">Tidak ada data budget plan CAPEX.</p>
+        <p className="text-sm text-gray-400">No CAPEX budget plan data found.</p>
       </div>
     );
   }
@@ -110,7 +110,7 @@ export default function BudgetPlanCapexTable({ data, onEdit, onInput, onDetail }
               <Th label="No CAPEX" column="noCapex" />
               <Th label="Item Remark" column="itemRemark" />
               <Th label="Total Budget" column="totalBudget" align="right" />
-              <Th label="Realisasi" column="totalRealisasi" align="right" />
+              <Th label="Realization" column="totalRealisasi" align="right" />
               <Th label="Remaining" column="remaining" align="right" />
               <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-gray-800 text-center">
                 Action
